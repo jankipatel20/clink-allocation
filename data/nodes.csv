@@ -1,0 +1,5 @@
+node_id,type,inv_init,inv_max,inv_cost,safety_stock
+IU1,IU,1000,5000,1.0,500
+IU2,IU,800,4000,1.2,400
+GU1,GU,200,2000,1.5,200
+GU2,GU,100,1500,1.5,150
