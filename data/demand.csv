@@ -1,0 +1,6 @@
+node_id,period_id,demand
+IU1,1,500
+GU1,1,1200
+GU2,1,900
+IU1,2,600
+GU1,2,1100

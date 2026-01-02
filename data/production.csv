@@ -1,0 +1,5 @@
+node_id,period_id,prod_cap,prod_cost
+IU1,1,3000,20
+IU1,2,3200,20
+IU2,1,2500,21
+IU2,2,2600,21
