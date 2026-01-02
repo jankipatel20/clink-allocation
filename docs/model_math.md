@@ -63,12 +63,7 @@ The objective of the model is to minimize total operational cost while satisfyin
 
 The objective is to minimize the total cost across all nodes and time periods, including production, inventory holding, and transportation costs.
 
-$$
-\min \;
-\sum_{n \in N} \sum_{t \in T} ProdCost_{n,t} \cdot Prod_{n,t}
-+ \sum_{n \in N} \sum_{t \in T} InvCost_n \cdot Inv_{n,t}
-+ \sum_{(o,d,m) \in A} \sum_{t \in T} TransCost_{o,d,m} \cdot X_{o,d,m,t}
-$$
+minn,t∑​ProdCostn,t​⋅Prodn,t​+n,t∑​InvCostn​⋅Invn,t​+o,d,m,t∑​TransCosto,d,m​⋅Xo,d,m,t​
 
 ---
 
@@ -78,10 +73,7 @@ $$
 
 Production at each node cannot exceed its available capacity.
 
-$$
-Prod_{n,t} \leq ProdCap_{n,t}
-\quad \forall n \in N,\; t \in T
-$$
+Prodn,t​≤ProdCapn,t​
 
 ---
 
@@ -91,14 +83,7 @@ For each node and time period, material balance must be maintained.
 
 **For the first period** ($t = 1$):
 
-$$
-Inv_{n,1} =
-InvInit_n
-+ Prod_{n,1}
-+ \sum_{(o,n,m) \in A} X_{o,n,m,1}
-* \sum_{(n,d,m) \in A} X_{n,d,m,1}
-* Demand_{n,1}
-$$
+Invn,t​=Invn,t−1​+Prodn,t​+o∑​Xo,n,t​−d∑​Xn,d,t​−Demandn,t​
 
 **For subsequent periods** ($t > 1$):
 
@@ -117,10 +102,7 @@ $$
 
 Inventory at each node must be at least the required safety stock level.
 
-$$
-Inv_{n,t} \geq SafetyStock_n
-\quad \forall n \in N,\; t \in T
-$$
+Invn,t​≥SafetyStockn​
 
 ---
 
@@ -139,10 +121,7 @@ $$
 
 Shipment quantity on each arc is limited by the number of trips and per‑trip capacity.
 
-$$
-X_{o,d,m,t} \leq TripCap_{o,d,m} \cdot Trips_{o,d,m,t}
-\quad \forall (o,d,m) \in A,\; t \in T
-$$
+Xo,d,m,t​≤TripCapo,d,m​⋅Tripso,d,m,t​
 
 ---
 
@@ -150,10 +129,7 @@ $$
 
 The number of trips on each arc cannot exceed the allowed maximum.
 
-$$
-Trips_{o,d,m,t} \leq MaxTrips_{o,d,m}
-\quad \forall (o,d,m) \in A,\; t \in T
-$$
+Tripso,d,m,t​≤MaxTripso,d,m​
 
 ---
 
@@ -180,3 +156,4 @@ $$
 ## 7. Conclusion
 
 This MILP formulation enables cost‑optimal and operationally feasible clinker production and distribution decisions across the cement supply chain while respecting real‑world production, inventory, and transportation constraints.
+
