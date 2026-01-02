@@ -1,6 +1,8 @@
-node_id,period_id,demand
-IU1,1,500
-GU1,1,1200
-GU2,1,900
-IU1,2,600
-GU1,2,1100
+origin,dest,mode,trip_cap,sbq,trans_cost,max_trips
+IU1,GU1,TRUCK,30,10,0.50,200
+IU1,GU2,TRUCK,30,10,0.55,180
+IU2,GU1,TRUCK,30,10,0.60,170
+IU2,GU2,RAIL,100,50,0.35,60
+IU1,IU2,RAIL,100,50,0.30,40
+IU2,IU1,RAIL,100,50,0.30,40
+
