@@ -9,16 +9,20 @@ from pyomo.environ import *
 # LOAD DATA
 # --------------------------------------------------
 
+import os
+
 def load_data():
-    nodes = pd.read_csv("data/nodes.csv")
-    periods = pd.read_csv("data/periods.csv")
-    production = pd.read_csv("data/production.csv")
-    demand = pd.read_csv("data/demand.csv")
-    arcs = pd.read_csv("data/arcs.csv")
-    scenarios = pd.read_csv("data/scenarios.csv")
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    DATA_DIR = os.path.join(BASE_DIR, "data")
+
+    nodes = pd.read_csv(os.path.join(DATA_DIR, "nodes.csv"))
+    periods = pd.read_csv(os.path.join(DATA_DIR, "periods.csv"))
+    production = pd.read_csv(os.path.join(DATA_DIR, "production.csv"))
+    demand = pd.read_csv(os.path.join(DATA_DIR, "demand.csv"))
+    arcs = pd.read_csv(os.path.join(DATA_DIR, "arcs.csv"))
+    scenarios = pd.read_csv(os.path.join(DATA_DIR, "scenarios.csv"))
 
     return nodes, periods, production, demand, arcs, scenarios
-
 
 # --------------------------------------------------
 # BUILD MODEL
@@ -38,7 +42,7 @@ def build_model():
     model.S = Set(initialize=scenarios["scenario"].tolist())
 
     model.ARCS = Set(
-        initialize=[(r.origin, r.dest, r.mode) for _, r in arcs.iterrows()],
+        initialize=[(r['origin'], r['dest'], r['mode']) for _, r in arcs.iterrows()],
         dimen=3
     )
 
