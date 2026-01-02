@@ -139,11 +139,58 @@ def build_model():
 
 def solve_model():
     model = build_model()
-    solver = SolverFactory("cbc")  # or glpk
+    solver = SolverFactory(
+    "glpk",
+    executable=r"glpsol"
+)   # or cbc
     result = solver.solve(model, tee=True)
 
     print("Solver Status:", result.solver.status)
     print("Termination:", result.solver.termination_condition)
+
+    # ------------------------
+    # PRINT RESULTS
+    # ------------------------
+
+    print("\n================= SOLUTION SUMMARY =================")
+
+    # Objective value
+    print("\n=== TOTAL COST ===")
+    print(f"Total Cost = {value(model.OBJ)}")
+
+    # Production
+    print("\n=== PRODUCTION (Prod[i,t]) ===")
+    for i in model.N:
+        for t in model.T:
+            val = model.Prod[i, t].value
+            if val is not None and val > 0:
+                print(f"Prod[{i}, {t}] = {val}")
+
+    # Inventory
+    print("\n=== INVENTORY (Inv[n,t]) ===")
+    for n in model.N:
+        for t in model.T:
+            val = model.Inv[n, t].value
+            if val is not None:
+                print(f"Inv[{n}, {t}] = {val}")
+
+    # Shipments
+    print("\n=== SHIPMENTS (X[o,d,m,t]) ===")
+    for (i, j, m) in model.ARCS:
+        for t in model.T:
+            val = model.X[i, j, m, t].value
+            if val is not None and val > 0:
+                print(f"Ship[{i} -> {j}, {m}, {t}] = {val}")
+
+    # Trips
+    print("\n=== TRIPS (Trips[o,d,m,t]) ===")
+    for (i, j, m) in model.ARCS:
+        for t in model.T:
+            val = model.Trips[i, j, m, t].value
+            if val is not None and val > 0:
+                print(f"Trips[{i} -> {j}, {m}, {t}] = {val}")
+
+    print("\n================= END OF SOLUTION =================\n")
 
     return model
 
