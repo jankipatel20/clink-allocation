@@ -1,0 +1,19 @@
+period,plant,week,utilization,service_level,co2_emissions
+1,Plant A,1,85,96.1,5200
+1,Plant B,1,75,96.1,4800
+1,Plant C,1,68,96.1,4200
+2,Plant A,2,88,96.8,5100
+2,Plant B,2,78,96.8,4950
+2,Plant C,2,71,96.8,4350
+3,Plant A,3,82,97.2,5050
+3,Plant B,3,71,97.2,4700
+3,Plant C,3,76,97.2,4300
+4,Plant A,4,86,97.5,4950
+4,Plant B,4,78,97.5,4650
+4,Plant C,4,79,97.5,4200
+5,Plant A,5,91,97.8,4900
+5,Plant B,5,81,97.8,4600
+5,Plant C,5,83,97.8,4100
+6,Plant A,6,93,98.1,4850
+6,Plant B,6,83,98.1,4550
+6,Plant C,6,85,98.1,3950
