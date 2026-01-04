@@ -16,7 +16,7 @@ st.set_page_config(page_title="Clinker Allocation & Optimization", layout="wide"
 
 st.markdown("""
 <div class="navbar">
-    <div class="nav-left"> 📦 Clinker Allocation & Optimization</div>
+    <div class="nav-left"> Clinker Allocation & Optimization</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -144,6 +144,69 @@ div.stButton > button {
 }
 
 div.stButton > button:hover {
+    background: #3e8e41;
+}
+
+/* Style File Uploader to look like a button */
+[data-testid="stFileUploader"] {
+    width: auto;
+    padding: 0;
+}
+
+[data-testid="stFileUploader"] > label {
+    display: none !important;
+}
+
+[data-testid="stFileUploader"] section {
+    padding: 0 !important;
+    border: none !important;
+    background: transparent !important;
+}
+
+/* Hide drag-and-drop text, dropzone, and status */
+[data-testid="stFileUploader"] section > div:nth-child(1),
+[data-testid="stFileUploader"] section > div:nth-child(2),
+[data-testid="stFileUploader"] section + div {
+    display: none !important;
+}
+
+/* Hide any remaining helper text inside the section */
+[data-testid="stFileUploader"] section div {
+    display: none !important;
+}
+
+/* Hide native input but keep it functional */
+[data-testid="stFileUploader"] input[type="file"] {
+    opacity: 0;
+    height: 0;
+    width: 0;
+    position: absolute;
+}
+
+/* Style the visible button */
+[data-testid="stFileUploader"] button {
+    background: #1F3D2B;
+    color: white;
+    border-radius: 8px;
+    padding: 10px 22px;
+    font-weight: 600;
+    font-size: 16px;
+    border: none;
+    width: 100%;
+}
+
+[data-testid="stFileUploader"] button svg,
+[data-testid="stFileUploader"] button p,
+[data-testid="stFileUploader"] button div,
+            # !
+[data-testid="stFileUploader"] button span {
+    display: none;
+}
+
+[data-testid="stFileUploader"] button::after {
+}
+
+[data-testid="stFileUploader"] button:hover {
     background: #3e8e41;
 }
 </style>
@@ -396,7 +459,7 @@ with col4:
 
 st.markdown("---")
 
-nav_left, nav_right = st.columns([4, 1])
+nav_left, nav_right = st.columns([3, 2])
 
 with nav_left:
     st.markdown(
@@ -405,7 +468,25 @@ with nav_left:
     )
 
 with nav_right:
-    optimize_clicked = st.button("Run Optimization")
+    col_btn1, col_btn2 = st.columns(2)
+    
+    with col_btn1:
+        uploaded_file = st.file_uploader(
+            "",
+            type=["csv"],
+            help="Upload CSV data file",
+            label_visibility="collapsed"
+        )
+        if uploaded_file is not None:
+            try:
+                uploaded_data = pd.read_csv(uploaded_file)
+                st.success(f"✅ {uploaded_file.name} uploaded!")
+            except Exception as e:
+                st.error(f"❌ Error: {str(e)}")
+    
+    with col_btn2:
+        optimize_clicked = st.button("Run Optimization", use_container_width=True)
+
 if optimize_clicked:
     st.success("Optimization started!")
     # call your optimization function here
@@ -858,37 +939,7 @@ with tab4:
         """)
 
 st.markdown("---")
-# st.markdown("""
-# <div class="footer-container">
-#     <div class="footer-title">About This System</div>
 
-#     <div class="footer-grid">
-#         <div class="footer-section">
-#             <h4>Optimization Engine</h4>
-#             <p>
-#                 Mixed-Integer Linear Programming (MILP) using
-#                 CBC/GLPK solvers via Pyomo
-#             </p>
-#         </div>
-
-#         <div class="footer-section">
-#             <h4>Key Constraints</h4>
-#             <p>
-#                 Production capacity, inventory balance,
-#                 safety stock, trip capacity, and batch quantities
-#             </p>
-#         </div>
-
-#         <div class="footer-section">
-#             <h4>Cost Optimization</h4>
-#             <p>
-#                 Minimizes total costs across production,
-#                 inventory holding, and transportation
-#             </p>
-#         </div>
-#     </div>
-# </div>
-# """, unsafe_allow_html=True)
 st.markdown("""
 <div class="footer-container">
     <div class="footer-title">About This System</div>
