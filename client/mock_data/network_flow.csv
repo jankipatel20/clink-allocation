@@ -1,0 +1,8 @@
+source,target,volume,cost,mode
+Plant A,Warehouse North,3500,175,TRUCK
+Plant A,Warehouse South,2000,120,TRUCK
+Plant B,Warehouse North,4500,225,RAIL
+Plant B,Customer East,3000,180,TRUCK
+Plant C,Warehouse South,4000,200,RAIL
+Warehouse North,Customer East,2000,60,TRUCK
+Warehouse South,Customer East,3500,105,TRUCK

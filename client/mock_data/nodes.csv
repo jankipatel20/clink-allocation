@@ -1,0 +1,7 @@
+node_id,type,location,capacity,utilization,safety_stock,inv_cost,latitude,longitude
+Plant A,Producer,Mumbai,5000,85,500,1.0,19.0760,72.8777
+Plant B,Producer,Pune,4000,78,400,1.2,18.5204,73.8567
+Warehouse North,Warehouse,Delhi,2000,92,200,1.5,28.7041,77.1025
+Warehouse South,Warehouse,Bangalore,1800,88,150,1.5,12.9716,77.5946
+Customer East,Customer,Chennai,2200,76,200,1.5,13.0827,80.2707
+Plant C,Producer,Kolkata,3500,82,350,1.1,22.5726,88.3639
