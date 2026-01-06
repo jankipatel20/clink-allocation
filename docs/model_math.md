@@ -8,62 +8,61 @@ The objective of the model is to minimize total operational cost while satisfyin
 
 ## 1. Sets and Indices
 
-* **N** : Set of all nodes (plants), indexed by *n*  
+- **N**: Set of all nodes (plants), indexed by $n$  
   (Includes Integrated Units (IU) and Grinding Units (GU))
+- **T**: Set of planning periods (e.g., months), indexed by $t$
+- **A**: Set of transportation arcs, indexed by $(o, d, m)$  
+  where $o$ is origin, $d$ is destination, and $m$ is the transport mode
 
-* **T** : Set of planning periods (e.g., months), indexed by *t*
-
-* **A** : Set of transportation arcs, indexed by *(o, d, m)*  
-  where *o* is origin, *d* is destination, and *m* is the transport mode
-
-> **Note:** Integrated Units are not modeled as a separate set.  
-> Production at Grinding Units is implicitly restricted by assigning zero production capacity.
+**Note:** Integrated Units are not modeled as a separate set. Production at Grinding Units is implicitly restricted by assigning zero production capacity.
 
 ---
 
 ## 2. Parameters
 
 ### Production Parameters
-* **ProdCapₙₜ** : Maximum clinker production capacity at node *n* in period *t*
-* **ProdCostₙₜ** : Cost per unit of clinker produced at node *n* in period *t*
+- $\text{ProdCap}_{n,t}$: Maximum clinker production capacity at node $n$ in period $t$
+- $\text{ProdCost}_{n,t}$: Cost per unit of clinker produced at node $n$ in period $t$
 
 ### Demand Parameters
-* **Demandₙₜ** : Clinker demand at node *n* in period *t*
+- $\text{Demand}_{n,t}$: Clinker demand at node $n$ in period $t$
 
 ### Inventory Parameters
-* **InvInitₙ** : Initial inventory at node *n*
-* **SafetyStockₙ** : Minimum safety stock required at node *n*
-* **InvMaxₙ** : Maximum inventory capacity at node *n*
-* **InvCostₙ** : Inventory holding cost per unit at node *n*
+- $\text{InvInit}_n$: Initial inventory at node $n$
+- $\text{SafetyStock}_n$: Minimum safety stock required at node $n$
+- $\text{InvMax}_n$: Maximum inventory capacity at node $n$
+- $\text{InvCost}_n$: Inventory holding cost per unit at node $n$
 
 ### Transportation Parameters
-* **TransCostₒ𝒹ₘ** : Transportation cost per unit on arc *(o, d, m)*
-* **TripCapₒ𝒹ₘ** : Capacity per transportation trip on arc *(o, d, m)*
-* **MaxTripsₒ𝒹ₘ** : Maximum number of trips allowed on arc *(o, d, m)*
+- $\text{TransCost}_{o,d,m}$: Transportation cost per unit on arc $(o,d,m)$
+- $\text{TripCap}_{o,d,m}$: Capacity per transportation trip on arc $(o,d,m)$
+- $\text{MaxTrips}_{o,d,m}$: Maximum number of trips allowed on arc $(o,d,m)$
 
 ---
 
 ## 3. Decision Variables
 
-* **Prodₙₜ ≥ 0**  
-  Quantity of clinker produced at node *n* in period *t*
+- $\text{Prod}_{n,t} \ge 0$  
+  Quantity of clinker produced at node $n$ in period $t$
 
-* **Invₙₜ ≥ 0**  
-  Inventory level at node *n* at the end of period *t*
+- $\text{Inv}_{n,t} \ge 0$  
+  Inventory level at node $n$ at the end of period $t$
 
-* **Xₒ𝒹ₘₜ ≥ 0**  
-  Quantity of clinker transported on arc *(o, d, m)* in period *t*
+- $X_{o,d,m,t} \ge 0$  
+  Quantity of clinker transported on arc $(o,d,m)$ in period $t$
 
-* **Tripsₒ𝒹ₘₜ ∈ ℤ⁺**  
-  Number of transportation trips on arc *(o, d, m)* in period *t*
+- $\text{Trips}_{o,d,m,t} \in \mathbb{Z}^+$  
+  Number of transportation trips on arc $(o,d,m)$ in period $t$
 
 ---
 
 ## 4. Objective Function
 
-The objective is to minimize the total cost across all nodes and time periods, including production, inventory holding, and transportation costs.
+The objective is to minimize total cost, including production, inventory holding, and transportation costs.
 
-minn,t∑​ProdCostn,t​⋅Prodn,t​+n,t∑​InvCostn​⋅Invn,t​+o,d,m,t∑​TransCosto,d,m​⋅Xo,d,m,t​
+$$
+\min \sum_{n \in N} \sum_{t \in T} \text{ProdCost}_{n,t} \cdot \text{Prod}_{n,t} + \sum_{n \in N} \sum_{t \in T} \text{InvCost}_n \cdot \text{Inv}_{n,t} + \sum_{(o,d,m) \in A} \sum_{t \in T} \text{TransCost}_{o,d,m} \cdot X_{o,d,m,t}
+$$
 
 ---
 
@@ -73,7 +72,9 @@ minn,t∑​ProdCostn,t​⋅Prodn,t​+n,t∑​InvCostn​⋅Invn,t​+o,d,m,t
 
 Production at each node cannot exceed its available capacity.
 
-Prodn,t​≤ProdCapn,t​
+$$
+\text{Prod}_{n,t} \le \text{ProdCap}_{n,t} \quad \forall n \in N, t \in T
+$$
 
 ---
 
@@ -81,19 +82,16 @@ Prodn,t​≤ProdCapn,t​
 
 For each node and time period, material balance must be maintained.
 
-**For the first period** ($t = 1$):
-
-Invn,t​=Invn,t−1​+Prodn,t​+o∑​Xo,n,t​−d∑​Xn,d,t​−Demandn,t​
-
-**For subsequent periods** ($t > 1$):
+**For the first period** $(t = 1)$:
 
 $$
-Inv_{n,t} =
-Inv_{n,t-1}
-+ Prod_{n,t}
-+ \sum_{(o,n,m) \in A} X_{o,n,m,t}
-* \sum_{(n,d,m) \in A} X_{n,d,m,t}
-* Demand_{n,t}
+\text{Inv}_{n,1} = \text{InvInit}_n + \text{Prod}_{n,1} + \sum_{(o,n,m) \in A} X_{o,n,m,1} - \sum_{(n,d,m) \in A} X_{n,d,m,1} - \text{Demand}_{n,1}
+$$
+
+**For subsequent periods** $(t > 1)$:
+
+$$
+\text{Inv}_{n,t} = \text{Inv}_{n,t-1} + \text{Prod}_{n,t} + \sum_{(o,n,m) \in A} X_{o,n,m,t} - \sum_{(n,d,m) \in A} X_{n,d,m,t} - \text{Demand}_{n,t}
 $$
 
 ---
@@ -102,7 +100,9 @@ $$
 
 Inventory at each node must be at least the required safety stock level.
 
-Invn,t​≥SafetyStockn​
+$$
+\text{Inv}_{n,t} \ge \text{SafetyStock}_n \quad \forall n \in N, t \in T
+$$
 
 ---
 
@@ -111,17 +111,18 @@ Invn,t​≥SafetyStockn​
 Inventory at each node cannot exceed its maximum storage capacity.
 
 $$
-Inv_{n,t} \leq InvMax_n
-\quad \forall n \in N,\; t \in T
+\text{Inv}_{n,t} \le \text{InvMax}_n \quad \forall n \in N, t \in T
 $$
 
 ---
 
 ### 5.5 Transportation Capacity Constraint
 
-Shipment quantity on each arc is limited by the number of trips and per‑trip capacity.
+Shipment quantity on each arc is limited by the number of trips and per-trip capacity.
 
-Xo,d,m,t​≤TripCapo,d,m​⋅Tripso,d,m,t​
+$$
+X_{o,d,m,t} \le \text{TripCap}_{o,d,m} \cdot \text{Trips}_{o,d,m,t} \quad \forall (o,d,m) \in A, t \in T
+$$
 
 ---
 
@@ -129,31 +130,31 @@ Xo,d,m,t​≤TripCapo,d,m​⋅Tripso,d,m,t​
 
 The number of trips on each arc cannot exceed the allowed maximum.
 
-Tripso,d,m,t​≤MaxTripso,d,m​
+$$
+\text{Trips}_{o,d,m,t} \le \text{MaxTrips}_{o,d,m} \quad \forall (o,d,m) \in A, t \in T
+$$
 
 ---
 
 ### 5.7 Integrality Constraint
 
 $$
-Trips_{o,d,m,t} \in \mathbb{Z}^+
-\quad \forall (o,d,m) \in A,\; t \in T
+\text{Trips}_{o,d,m,t} \in \mathbb{Z}^+ \quad \forall (o,d,m) \in A, t \in T
 $$
 
 ---
 
 ## 6. Model Notes and Assumptions
 
-* Grinding Units do not produce clinker; this is enforced through zero production capacity.
-* Integrated Units may have both production and demand.
-* All costs are linear.
-* Demand is deterministic for each planning run.
-* Transportation routes and modes are predefined.
-* The model is solved as a Mixed Integer Linear Program.
+- Grinding Units do not produce clinker; this is enforced through zero production capacity.
+- Integrated Units may have both production and demand.
+- All costs are linear.
+- Demand is deterministic for each planning run.
+- Transportation routes and modes are predefined.
+- The model is solved as a Mixed Integer Linear Program.
 
 ---
 
 ## 7. Conclusion
 
-This MILP formulation enables cost‑optimal and operationally feasible clinker production and distribution decisions across the cement supply chain while respecting real‑world production, inventory, and transportation constraints.
-
+This MILP formulation enables cost-optimal and operationally feasible clinker production and distribution decisions across the cement supply chain while respecting real-world production, inventory, and transportation constraints.
