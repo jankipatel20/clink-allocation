@@ -5,6 +5,15 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 import plotly.io as pio
+from api_client import get_api_client
+
+# Helper function to format costs in Indian Rupees
+def format_inr(amount):
+    """Format amount in Indian Rupees with proper comma separators"""
+    if amount is None or amount == 0:
+        return "--"
+    # Use Indian numbering system formatting
+    return f"₹{amount:,.2f}"
 
 pio.templates["custom_light"] = pio.templates["plotly_white"]
 pio.templates["custom_light"].layout.legend.font.color = "#1F3D2B"
@@ -13,6 +22,15 @@ pio.templates.default = "custom_light"
 
 # Page configuration
 st.set_page_config(page_title="Clinker Allocation & Optimization", layout="wide", page_icon="📦")
+
+# Initialize API client
+api_client = get_api_client("http://localhost:8000")
+
+# Initialize session state for optimization results
+if 'optimization_result' not in st.session_state:
+    st.session_state.optimization_result = None
+if 'backend_connected' not in st.session_state:
+    st.session_state.backend_connected = api_client.health_check()
 
 st.markdown("""
 <div class="navbar">
@@ -410,49 +428,63 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# Backend connection status
+if not st.session_state.backend_connected:
+    st.warning("⚠️ Backend not connected. Start the backend server with: `uvicorn backend.main:app --reload`")
+
+# Get optimization results from session state
+result = st.session_state.optimization_result
+
 # Metrics Row
 col1, col2, col3, col4 = st.columns(4)
 
 with col1:
-    st.markdown("""
+    total_cost = format_inr(result['total_cost']) if result and result.get('status') == 'success' else "--"
+    st.markdown(f"""
     <div class="kpi-card">
         <div class="kpi-left">
             <h4>Total Cost</h4>
-            <h2>$4.25M</h2>
-            <span class="kpi-pill">↓ -25% vs baseline</span>
+            <h2>{total_cost}</h2>
+            <span class="kpi-pill">Optimized</span>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
 with col2:
-    st.markdown("""
+    status = result.get('status', 'Not Run') if result else 'Not Run'
+    status_display = status.title()
+    pill_class = "kpi-pill" if status == "success" else "kpi-pill"
+    st.markdown(f"""
     <div class="kpi-card">
         <div class="kpi-left">
             <h4>Status</h4>
-            <h2>optimal</h2>
-            <span class="kpi-pill">CBC Solver</span>
+            <h2>{status_display}</h2>
+            <span class="{pill_class}">CBC Solver</span>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
 with col3:
-    st.markdown("""
+    num_plants = len(set([p['node_id'] for p in result['production']])) if result and result.get('status') == 'success' else 0
+    plants_display = f"{num_plants}/3" if num_plants > 0 else "--"
+    st.markdown(f"""
     <div class="kpi-card">
         <div class="kpi-left">
             <h4>Plants Active</h4>
-            <h2>3/3</h2>
-            <span class="kpi-pill">100% utilization</span>
+            <h2>{plants_display}</h2>
+            <span class="kpi-pill">Active</span>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
 with col4:
-    st.markdown("""
+    run_status = "Completed" if result and result.get('status') == 'success' else "Pending"
+    st.markdown(f"""
     <div class="kpi-card">
         <div class="kpi-left">
             <h4>Last Run</h4>
-            <h2>completed</h2>
-            <span class="kpi-pill">Auto-refresh: 30min</span>
+            <h2>{run_status}</h2>
+            <span class="kpi-pill">Backend: {'🟢' if st.session_state.backend_connected else '🔴'}</span>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -488,9 +520,21 @@ with nav_right:
         optimize_clicked = st.button("Run Optimization", use_container_width=True)
 
 if optimize_clicked:
-    st.success("Optimization started!")
-    # call your optimization function here
-    # run_optimization()
+    if not st.session_state.backend_connected:
+        st.error("❌ Backend not connected. Please start the backend server.")
+    else:
+        with st.spinner("🔄 Running optimization... This may take a few minutes."):
+            # Run optimization (with or without uploaded files)
+            result = api_client.run_optimization()
+            
+            if result['status'] == 'success':
+                st.session_state.optimization_result = result
+                st.success(f"✅ Optimization completed! Total cost: {format_inr(result['total_cost'])}")
+                st.rerun()  # Refresh to show updated metrics
+            elif result['status'] == 'failed':
+                st.error(f"❌ Optimization failed: {result.get('message', 'Unknown error')}")
+            else:
+                st.error(f"❌ Error: {result.get('message', 'Unknown error')}")
 
 
 # Tabs
@@ -559,7 +603,7 @@ with tab1:
             st.markdown("""
             <div class="cost-card">
                 <div class="cost-title">Production</div>
-                <div class="cost-value">$2.50M</div>
+                <div class="cost-value">₹25,00,000</div>
             </div>
             """, unsafe_allow_html=True)
 
@@ -567,7 +611,7 @@ with tab1:
             st.markdown("""
             <div class="cost-card">
                 <div class="cost-title">Inventory</div>
-                <div class="cost-value">$0.75M</div>
+                <div class="cost-value">₹7,50,000</div>
             </div>
             """, unsafe_allow_html=True)
 
@@ -575,7 +619,7 @@ with tab1:
             st.markdown("""
             <div class="cost-card">
                 <div class="cost-title">Transport</div>
-                <div class="cost-value">$1.20M</div>
+                <div class="cost-value">₹12,00,000</div>
             </div>
             """, unsafe_allow_html=True)
 
@@ -658,11 +702,23 @@ with tab2:
     st.subheader("Network Flow Visualization")
     st.caption("Clinker transportation routes and volumes")
     
-    # Sankey diagram
-    sources = ['Plant A', 'Plant A', 'Plant B', 'Plant B', 'Plant C', 'Warehouse North', 'Warehouse South']
-    targets = ['Warehouse North', 'Warehouse South', 'Warehouse North', 'Customer East', 'Warehouse South', 'Customer East', 'Customer West']
-    values = [3500, 2000, 4500, 3000, 4000, 2000, 3500]
-    costs = [175, 120, 225, 180, 200, 60, 105]
+    # Use real data if available, otherwise use mock data
+    if result and result.get('status') == 'success' and result.get('shipments'):
+        # Real data from backend
+        shipments = result['shipments']
+        sources = [s['origin'] for s in shipments]
+        targets = [s['destination'] for s in shipments]
+        values = [s['quantity'] for s in shipments]
+        # Generate placeholder costs (real cost calculation would come from backend)
+        costs = [round(v * 0.05, 2) for v in values]  # ~5% of volume as cost
+        
+        st.info(f"📊 Showing {len(shipments)} shipment routes from optimization results")
+    else:
+        # Mock data
+        sources = ['Plant A', 'Plant A', 'Plant B', 'Plant B', 'Plant C', 'Warehouse North', 'Warehouse South']
+        targets = ['Warehouse North', 'Warehouse South', 'Warehouse North', 'Customer East', 'Warehouse South', 'Customer East', 'Customer West']
+        values = [3500, 2000, 4500, 3000, 4000, 2000, 3500]
+        costs = [175, 120, 225, 180, 200, 60, 105]
     
     # Create node labels
     all_nodes = list(set(sources + targets))
@@ -717,7 +773,7 @@ with tab2:
         'Source': sources,
         'Target': targets,
         'Volume (tons)': values,
-        'Cost ($)': [f'${c:,}' for c in costs]
+        'Cost (₹)': [f'₹{c:,.2f}' for c in costs]
     })
 
     # 2. Style the DataFrame (Headers + Rows)
@@ -907,18 +963,18 @@ with tab4:
             with col_x:
                 st.metric(
                     label="Baseline",
-                    value="$4.25M",
+                    value="₹42,50,000",
                     delta="Current"
                 )
             with col_y:
                 st.metric(
                     label="Scenario Result",
-                    value=f"${new_cost}M",
+                    value=f"₹{new_cost*10:.0f} L",
                     delta=delta,
                     delta_color="inverse"
                 )
         else:
-            st.info("**Baseline:** $4.25M (Current)")
+            st.info("**Baseline:** ₹42,50,000 (Current)")
             st.caption("Run a scenario to see results")
 
     
@@ -937,6 +993,56 @@ with tab4:
         Analyze effects of plant maintenance or temporary 
         capacity reductions.
         """)
+
+# Detailed Results Section (only shown if optimization has been run)
+if result and result.get('status') == 'success':
+    st.markdown("---")
+    st.markdown("## 📊 Detailed Optimization Results")
+    
+    # Create tabs for detailed data
+    detail_tab1, detail_tab2, detail_tab3 = st.tabs(["Production Plan", "Inventory Levels", "Shipment Plan"])
+    
+    with detail_tab1:
+        st.subheader("Production Plan")
+        if result.get('production'):
+            df_production = pd.DataFrame(result['production'])
+            st.dataframe(df_production, use_container_width=True, hide_index=True)
+            st.download_button(
+                "📥 Download Production Plan (CSV)",
+                data=df_production.to_csv(index=False),
+                file_name="production_plan.csv",
+                mime="text/csv"
+            )
+        else:
+            st.info("No production data available")
+    
+    with detail_tab2:
+        st.subheader("Inventory Levels")
+        if result.get('inventory'):
+            df_inventory = pd.DataFrame(result['inventory'])
+            st.dataframe(df_inventory, use_container_width=True, hide_index=True)
+            st.download_button(
+                "📥 Download Inventory Plan (CSV)",
+                data=df_inventory.to_csv(index=False),
+                file_name="inventory_plan.csv",
+                mime="text/csv"
+            )
+        else:
+            st.info("No inventory data available")
+    
+    with detail_tab3:
+        st.subheader("Shipment Plan")
+        if result.get('shipments'):
+            df_shipments = pd.DataFrame(result['shipments'])
+            st.dataframe(df_shipments, use_container_width=True, hide_index=True)
+            st.download_button(
+                "📥 Download Shipment Plan (CSV)",
+                data=df_shipments.to_csv(index=False),
+                file_name="shipment_plan.csv",
+                mime="text/csv"
+            )
+        else:
+            st.info("No shipment data available")
 
 st.markdown("---")
 
