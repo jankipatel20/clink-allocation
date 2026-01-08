@@ -1,6 +1,7 @@
 import os
 import shutil
 from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 
 from backend.extract_sheets import extract_excel_to_csv
 from backend.data_loader import load_data
@@ -9,6 +10,24 @@ from backend import config
 
 
 app = FastAPI()
+
+# Enable CORS for frontend connection
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow all origins (Streamlit runs on different port)
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# ==================================================
+# HEALTH CHECK ENDPOINT
+# ==================================================
+@app.get("/health")
+def health_check():
+    """Check if backend is running"""
+    return {"status": "ok"}
 
 
 # ==================================================

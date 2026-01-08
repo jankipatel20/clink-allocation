@@ -1,0 +1,6 @@
+scenario,total_cost,savings,service_level,feasible
+Baseline,4250000,0,97.8,True
+High Demand (+20%),5100000,-850000,96.2,True
+Low Demand (-20%),3610000,640000,99.1,True
+Fuel Cost +15%,4890000,-640000,97.5,True
+New Route,3950000,300000,98.5,True
