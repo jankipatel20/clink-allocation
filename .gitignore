@@ -1,8 +1,42 @@
 __pycache__/
 *.pyc
-
+*.py[cod]
+*.pyo
+*.pyd
 # Local configuration (each developer has their own)
 backend/config.py
 
 # Keep the example config in git
 !backend/config.example.py
+
+# Ignore virtual environments
+venv/
+env/
+.venv/
+.env/
+# Ignore IDE specific files
+.vscode/
+.idea/
+*.iml
+# Ignore logs and databases
+*.log
+*.sqlite3
+# Ignore coverage reports
+htmlcov/
+.coverage
+.coverage.*
+# Ignore distribution/build files
+dist/
+
+*.pem
+*.key
+*.crt
+*.csv
+*.zip
+*.tar
+*.tar.gz
+*.mp4
+*.pid
+docker-compose.override.yml
+.vscode/
+!.vscode/extensions.json
