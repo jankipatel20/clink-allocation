@@ -1,6 +1,7 @@
 import io
 import streamlit as st
 import pandas as pd
+<<<<<<< HEAD
 import requests
 
 BACKEND_UPLOAD_URL = "http://localhost:8000/upload"
@@ -10,11 +11,23 @@ def display_uploader_and_button(nav_right_col):
     # Initialize session state for history
     if "show_history" not in st.session_state:
         st.session_state.show_history = False
+=======
+from api_client import BackendAPIClient
+
+def display_uploader_and_button(nav_right_col):
+    """Display file uploader and optimization button"""
+    # Initialize session state
+    if "show_history" not in st.session_state:
+        st.session_state.show_history = False
+    if "uploaded_file" not in st.session_state:
+        st.session_state.uploaded_file = None
+>>>>>>> 57081d4c7b3aa07bfd2b1c69688fcd21748be833
     
     with nav_right_col:
         # Browse Files, Export CSV, History - in one row
         col_btn1, col_btn2, col_btn3 = st.columns([1.1, 1, 1])
         
+<<<<<<< HEAD
         # $$ the backend upload logic
 
         with col_btn1:
@@ -51,6 +64,21 @@ def display_uploader_and_button(nav_right_col):
                             st.error(f"Uploaded locally but failed to send to backend: {send_err}")
                     except Exception as e:
                         st.error(f"Error: {str(e)}")
+=======
+        with col_btn1:
+            uploaded_file = st.file_uploader(
+                "",
+                type=["xlsx"],
+                help="Upload Excel file with optimization data",
+                label_visibility="collapsed",
+                accept_multiple_files=False
+            )
+            
+            # Store uploaded file in session state
+            if uploaded_file:
+                st.session_state.uploaded_file = uploaded_file
+                st.success(f"✓ {uploaded_file.name} ready")
+>>>>>>> 57081d4c7b3aa07bfd2b1c69688fcd21748be833
         
         # Export CSV button
         with col_btn2:
@@ -87,5 +115,49 @@ def display_uploader_and_button(nav_right_col):
     return False
 
 def handle_optimization():
+<<<<<<< HEAD
     """Handle optimization button click"""
     st.success("Optimization started!")
+=======
+    """Handle optimization button click and call backend"""
+    
+    # Initialize API client
+    api_client = BackendAPIClient()
+    
+    # Check backend health
+    with st.spinner("Connecting to backend..."):
+        if not api_client.health_check():
+            st.error("❌ Backend is not running. Please start the backend server:\n\n`uvicorn backend.main:app --reload`")
+            return
+    
+    # Run optimization
+    with st.spinner("Running optimization... This may take a few minutes."):
+        try:
+            # Get uploaded file from session state
+            uploaded_file = st.session_state.get("uploaded_file")
+            
+            # Call backend
+            result = api_client.run_optimization(uploaded_file)
+            
+            # Check result status
+            if result.get("status") == "success":
+                # Store result in session state for display in tabs
+                st.session_state.optimization_result = result
+                st.session_state.backend_connected = True
+                
+                st.success("✅ Optimization completed successfully!")
+                st.balloons()
+                
+                # Display key results
+                if "total_cost" in result:
+                    st.metric("Total Cost", f"₹{result['total_cost']:,.2f}")
+                
+            elif result.get("status") == "error":
+                st.error(f"❌ Error: {result.get('message', 'Unknown error')}")
+                
+            elif result.get("status") == "failed":
+                st.warning(f"⚠️ Optimization failed: {result.get('message', 'Solver failed')}")
+                
+        except Exception as e:
+            st.error(f"❌ Unexpected error: {str(e)}")
+>>>>>>> 57081d4c7b3aa07bfd2b1c69688fcd21748be833
