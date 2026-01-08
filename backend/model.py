@@ -1,6 +1,7 @@
 import pandas as pd
 from pyomo.environ import *
 
+
 # ==================================================
 # BUILD MODEL
 # ==================================================
@@ -13,9 +14,13 @@ def build_model(demand_df, capacity_df, prod_cost_df, logistics_df,
     model.T = Set(initialize=sorted(demand_df["TIME PERIOD"].unique().tolist()))
 
     model.ARCS = Set(
-        initialize=[(str(r["FROM IU CODE"]), str(r["TO IUGU CODE"]), r["TRANSPORT CODE"])
-                    for _, r in logistics_df.iterrows()],
-        dimen=3
+        initialize=[(
+            str(r["FROM IU CODE"]),
+            str(r["TO IUGU CODE"]),
+            r["TRANSPORT CODE"],
+            r["TIME PERIOD"]
+        ) for _, r in logistics_df.iterrows()],
+        dimen=4
     )
 
     T_first, T_last = min(model.T), max(model.T)
@@ -66,23 +71,32 @@ def build_model(demand_df, capacity_df, prod_cost_df, logistics_df,
 
     # Transportation
     trans_cost = logistics_df.set_index(
-        ["FROM IU CODE","TO IUGU CODE","TRANSPORT CODE"]
-    )[["FREIGHT COST","HANDLING COST"]].sum(axis=1).to_dict()
+        ["FROM IU CODE","TO IUGU CODE","TRANSPORT CODE","TIME PERIOD"]
+    )["FREIGHT COST"].to_dict()
 
     trip_cap = logistics_df.set_index(
-        ["FROM IU CODE","TO IUGU CODE","TRANSPORT CODE"]
+        ["FROM IU CODE","TO IUGU CODE","TRANSPORT CODE","TIME PERIOD"]
     )["QUANTITY MULTIPLIER"].to_dict()
 
-    max_trips = logistics_df.set_index(
-        ["FROM IU CODE","TO IUGU CODE","TRANSPORT CODE"]
-    )["MAX TRIPS"].to_dict()
+
+    if "MAX TRIPS" in logistics_df.columns:
+        max_trips = logistics_df.set_index(
+            ["FROM IU CODE","TO IUGU CODE","TRANSPORT CODE"]
+        )["MAX TRIPS"].fillna(1e9).to_dict()
+    else:
+        max_trips = {
+            (r["FROM IU CODE"], r["TO IUGU CODE"], r["TRANSPORT CODE"]): 1e9
+            for _, r in logistics_df.iterrows()
+        }
+
 
 
     # ---------------- VARIABLES ----------------
     model.Prod = Var(model.N, model.T, domain=NonNegativeReals)
     model.Inv  = Var(model.N, model.T, domain=NonNegativeReals)
-    model.X    = Var(model.ARCS, model.T, domain=NonNegativeReals)
-    model.Trips = Var(model.ARCS, model.T, domain=NonNegativeIntegers)
+    model.X = Var(model.ARCS, domain=NonNegativeReals)
+    model.Trips = Var(model.ARCS, domain=NonNegativeIntegers)
+
 
     # ---------------- OBJECTIVE ----------------
     model.OBJ = Objective(
@@ -106,8 +120,8 @@ def build_model(demand_df, capacity_df, prod_cost_df, logistics_df,
 
     def inv_bal(m,n,t):
         prev = inv_open.get(n,0) if t==T_first else m.Inv[n,t-1]
-        inflow  = sum(m.X[i,n,m2,t] for (i,n2,m2) in m.ARCS if n2==n)
-        outflow = sum(m.X[n,j,m2,t] for (n2,j,m2) in m.ARCS if n2==n)
+        inflow  = sum(m.X[i,n,m2,tt] for (i,n2,m2,tt) in m.ARCS if n2==n and tt==t)
+        outflow = sum(m.X[n,j,m2,tt] for (n2,j,m2,tt) in m.ARCS if n2==n and tt==t)
         return prev + m.Prod[n,t] + inflow - outflow == demand.get((n,t),0) + m.Inv[n,t]
     model.InvBalance = Constraint(model.N,model.T,rule=inv_bal)
     def inv_cap_rule(m,n,t):
@@ -126,15 +140,17 @@ def build_model(demand_df, capacity_df, prod_cost_df, logistics_df,
         rule=lambda m,n: m.Inv[n,T_last] >= inv_close.get(n,0))
 
     def min_fulfill_rule(m,n,t):
-        served = sum(m.X[i,n,m2,t] for (i,n2,m2) in m.ARCS if n2==n)
+        served = sum(m.X[i,n,m2,tt] for (i,n2,m2,tt) in m.ARCS if n2==n and tt==t)
         return served >= min_fulfill.get((n,t),0) * demand.get((n,t),0)
     model.MinFulfill = Constraint(model.N,model.T,rule=min_fulfill_rule)
 
-    model.TripCap = Constraint(model.ARCS,model.T,
-        rule=lambda m,i,j,m2,t: m.X[i,j,m2,t] <= trip_cap.get((i,j,m2),0)*m.Trips[i,j,m2,t])
+    model.TripCap = Constraint(model.ARCS,
+        rule=lambda m,i,j,m2,t: m.X[i,j,m2,t] <= trip_cap.get((i,j,m2,t),0)*m.Trips[i,j,m2,t])
 
-    model.MaxTrips = Constraint(model.ARCS,model.T,
-        rule=lambda m,i,j,m2,t: m.Trips[i,j,m2,t] <= max_trips.get((i,j,m2),0))
+
+    model.MaxTrips = Constraint(model.ARCS,
+        rule=lambda m,i,j,m2,t: m.Trips[i,j,m2,t] <= max_trips.get((i,j,m2),1e9))
+
 
     return model
 
@@ -144,6 +160,8 @@ def build_model(demand_df, capacity_df, prod_cost_df, logistics_df,
 # ==================================================
 from pyomo.environ import SolverFactory, SolverStatus, TerminationCondition, value
 
+from pyomo.environ import SolverFactory, TerminationCondition, value
+
 def run_optimizer(data):
 
     try:
@@ -151,6 +169,7 @@ def run_optimizer(data):
         solver = SolverFactory("cbc")
         result = solver.solve(model, tee=False)
 
+        # ❌ failure cases
         if result.solver.termination_condition != TerminationCondition.optimal:
             return {
                 "success": False,
@@ -159,6 +178,30 @@ def run_optimizer(data):
                 "model_obj": None
             }
 
+        # 🔍 DEBUG PRINTS
+        print("\n================= MODEL DEBUG =================")
+        print("Objective value:", value(model.OBJ))
+
+        print("\n--- Production ---")
+        for n in model.N:
+            for t in model.T:
+                if model.Prod[n,t].value is not None and model.Prod[n,t].value > 0:
+                    print(f"Prod[{n},{t}] = {model.Prod[n,t].value}")
+
+        print("\n--- Inventory ---")
+        for n in model.N:
+            for t in model.T:
+                if model.Inv[n,t].value is not None and model.Inv[n,t].value > 0:
+                    print(f"Inv[{n},{t}] = {model.Inv[n,t].value}")
+
+        print("\n--- Shipments ---")
+        for (i,j,m2,t) in model.ARCS:
+            if model.X[i,j,m2,t].value and model.X[i,j,m2,t].value > 0:
+                print(f"X[{i}->{j},{m2},{t}] = {model.X[i,j,m2,t].value}")
+
+        print("\n=============================================\n")
+
+        # ✅ SUCCESS RETURN
         return {
             "success": True,
             "message": "Optimal solution found",
@@ -173,10 +216,7 @@ def run_optimizer(data):
             "total_cost": None,
             "model_obj": None
         }
-        
-        
-      
-from model import run_optimizer
+
 
 FILE = "data/dataset.xlsx"   # change path if needed
 
@@ -193,7 +233,6 @@ data = {
     "type_df":       pd.read_excel(xls, "IUGUType"),
 }
 
-print("🚀 Running clinker optimizer locally...\n")
 
 result = run_optimizer(data)
 
