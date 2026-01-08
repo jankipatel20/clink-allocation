@@ -5,6 +5,15 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 import plotly.io as pio
+from api_client import get_api_client
+
+# Helper function to format costs in Indian Rupees
+def format_inr(amount):
+    """Format amount in Indian Rupees with proper comma separators"""
+    if amount is None or amount == 0:
+        return "--"
+    # Use Indian numbering system formatting
+    return f"₹{amount:,.2f}"
 
 pio.templates["custom_light"] = pio.templates["plotly_white"]
 pio.templates["custom_light"].layout.legend.font.color = "#1F3D2B"
@@ -13,6 +22,15 @@ pio.templates.default = "custom_light"
 
 # Page configuration
 st.set_page_config(page_title="Clinker Allocation & Optimization", layout="wide", page_icon="📦")
+
+# Initialize API client
+api_client = get_api_client("http://localhost:8000")
+
+# Initialize session state for optimization results
+if 'optimization_result' not in st.session_state:
+    st.session_state.optimization_result = None
+if 'backend_connected' not in st.session_state:
+    st.session_state.backend_connected = api_client.health_check()
 
 st.markdown("""
 <div class="navbar">
@@ -410,49 +428,63 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# Backend connection status
+if not st.session_state.backend_connected:
+    st.warning("⚠️ Backend not connected. Start the backend server with: `uvicorn backend.main:app --reload`")
+
+# Get optimization results from session state
+result = st.session_state.optimization_result
+
 # Metrics Row
 col1, col2, col3, col4 = st.columns(4)
 
 with col1:
-    st.markdown("""
+    total_cost = format_inr(result['total_cost']) if result and result.get('status') == 'success' else "--"
+    st.markdown(f"""
     <div class="kpi-card">
         <div class="kpi-left">
             <h4>Total Cost</h4>
-            <h2>$4.25M</h2>
-            <span class="kpi-pill">↓ -25% vs baseline</span>
+            <h2>{total_cost}</h2>
+            <span class="kpi-pill">Optimized</span>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
 with col2:
-    st.markdown("""
+    status = result.get('status', 'Not Run') if result else 'Not Run'
+    status_display = status.title()
+    pill_class = "kpi-pill" if status == "success" else "kpi-pill"
+    st.markdown(f"""
     <div class="kpi-card">
         <div class="kpi-left">
             <h4>Status</h4>
-            <h2>optimal</h2>
-            <span class="kpi-pill">CBC Solver</span>
+            <h2>{status_display}</h2>
+            <span class="{pill_class}">CBC Solver</span>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
 with col3:
-    st.markdown("""
+    num_plants = len(set([p['node_id'] for p in result['production']])) if result and result.get('status') == 'success' else 0
+    plants_display = f"{num_plants}/3" if num_plants > 0 else "--"
+    st.markdown(f"""
     <div class="kpi-card">
         <div class="kpi-left">
             <h4>Plants Active</h4>
-            <h2>3/3</h2>
-            <span class="kpi-pill">100% utilization</span>
+            <h2>{plants_display}</h2>
+            <span class="kpi-pill">Active</span>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
 with col4:
-    st.markdown("""
+    run_status = "Completed" if result and result.get('status') == 'success' else "Pending"
+    st.markdown(f"""
     <div class="kpi-card">
         <div class="kpi-left">
             <h4>Last Run</h4>
-            <h2>completed</h2>
-            <span class="kpi-pill">Auto-refresh: 30min</span>
+            <h2>{run_status}</h2>
+            <span class="kpi-pill">Backend: {'🟢' if st.session_state.backend_connected else '🔴'}</span>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -488,9 +520,21 @@ with nav_right:
         optimize_clicked = st.button("Run Optimization", use_container_width=True)
 
 if optimize_clicked:
-    st.success("Optimization started!")
-    # call your optimization function here
-    # run_optimization()
+    if not st.session_state.backend_connected:
+        st.error("❌ Backend not connected. Please start the backend server.")
+    else:
+        with st.spinner("🔄 Running optimization... This may take a few minutes."):
+            # Run optimization (with or without uploaded files)
+            result = api_client.run_optimization()
+            
+            if result['status'] == 'success':
+                st.session_state.optimization_result = result
+                st.success(f"✅ Optimization completed! Total cost: {format_inr(result['total_cost'])}")
+                st.rerun()  # Refresh to show updated metrics
+            elif result['status'] == 'failed':
+                st.error(f"❌ Optimization failed: {result.get('message', 'Unknown error')}")
+            else:
+                st.error(f"❌ Error: {result.get('message', 'Unknown error')}")
 
 
 # Tabs
@@ -552,30 +596,36 @@ with tab1:
         
         st.plotly_chart(fig_pie, use_container_width=True)
         
-        # Cost boxes
+        # Cost boxes with real data
         col_a, col_b, col_c = st.columns(3)
+        
+        # Get cost breakdown from optimization results
+        cost_bd = result.get('cost_breakdown', {}) if result and result.get('status') == 'success' else {}
+        prod_cost = cost_bd.get('production_cost', 2500000)
+        inv_cost_val = cost_bd.get('inventory_cost', 750000)
+        trans_cost_val = cost_bd.get('transport_cost', 1200000)
 
         with col_a:
-            st.markdown("""
+            st.markdown(f"""
             <div class="cost-card">
                 <div class="cost-title">Production</div>
-                <div class="cost-value">$2.50M</div>
+                <div class="cost-value">{format_inr(prod_cost)}</div>
             </div>
             """, unsafe_allow_html=True)
 
         with col_b:
-            st.markdown("""
+            st.markdown(f"""
             <div class="cost-card">
                 <div class="cost-title">Inventory</div>
-                <div class="cost-value">$0.75M</div>
+                <div class="cost-value">{format_inr(inv_cost_val)}</div>
             </div>
             """, unsafe_allow_html=True)
 
         with col_c:
-            st.markdown("""
+            st.markdown(f"""
             <div class="cost-card">
                 <div class="cost-title">Transport</div>
-                <div class="cost-value">$1.20M</div>
+                <div class="cost-value">{format_inr(trans_cost_val)}</div>
             </div>
             """, unsafe_allow_html=True)
 
@@ -658,11 +708,23 @@ with tab2:
     st.subheader("Network Flow Visualization")
     st.caption("Clinker transportation routes and volumes")
     
-    # Sankey diagram
-    sources = ['Plant A', 'Plant A', 'Plant B', 'Plant B', 'Plant C', 'Warehouse North', 'Warehouse South']
-    targets = ['Warehouse North', 'Warehouse South', 'Warehouse North', 'Customer East', 'Warehouse South', 'Customer East', 'Customer West']
-    values = [3500, 2000, 4500, 3000, 4000, 2000, 3500]
-    costs = [175, 120, 225, 180, 200, 60, 105]
+    # Use real data if available, otherwise use mock data
+    if result and result.get('status') == 'success' and result.get('shipments'):
+        # Real data from backend
+        shipments = result['shipments']
+        sources = [s['origin'] for s in shipments]
+        targets = [s['destination'] for s in shipments]
+        values = [s['quantity'] for s in shipments]
+        # Generate placeholder costs (real cost calculation would come from backend)
+        costs = [round(v * 0.05, 2) for v in values]  # ~5% of volume as cost
+        
+        st.info(f"📊 Showing {len(shipments)} shipment routes from optimization results")
+    else:
+        # Mock data
+        sources = ['Plant A', 'Plant A', 'Plant B', 'Plant B', 'Plant C', 'Warehouse North', 'Warehouse South']
+        targets = ['Warehouse North', 'Warehouse South', 'Warehouse North', 'Customer East', 'Warehouse South', 'Customer East', 'Customer West']
+        values = [3500, 2000, 4500, 3000, 4000, 2000, 3500]
+        costs = [175, 120, 225, 180, 200, 60, 105]
     
     # Create node labels
     all_nodes = list(set(sources + targets))
@@ -717,7 +779,7 @@ with tab2:
         'Source': sources,
         'Target': targets,
         'Volume (tons)': values,
-        'Cost ($)': [f'${c:,}' for c in costs]
+        'Cost (₹)': [f'₹{c:,.2f}' for c in costs]
     })
 
     # 2. Style the DataFrame (Headers + Rows)
@@ -907,18 +969,18 @@ with tab4:
             with col_x:
                 st.metric(
                     label="Baseline",
-                    value="$4.25M",
+                    value="₹42,50,000",
                     delta="Current"
                 )
             with col_y:
                 st.metric(
                     label="Scenario Result",
-                    value=f"${new_cost}M",
+                    value=f"₹{new_cost*10:.0f} L",
                     delta=delta,
                     delta_color="inverse"
                 )
         else:
-            st.info("**Baseline:** $4.25M (Current)")
+            st.info("**Baseline:** ₹42,50,000 (Current)")
             st.caption("Run a scenario to see results")
 
     
@@ -937,6 +999,201 @@ with tab4:
         Analyze effects of plant maintenance or temporary 
         capacity reductions.
         """)
+
+# Detailed Results Section (only shown if optimization has been run)
+if result and result.get('status') == 'success':
+    st.markdown("---")
+    st.markdown("## 📊 Detailed Optimization Results")
+    
+    # Create tabs for detailed data
+    detail_tab1, detail_tab2, detail_tab3, detail_tab4 = st.tabs(["Production Plan", "Inventory Levels", "Shipment Plan", "Cost Breakdown"])
+    
+    with detail_tab1:
+        st.subheader("Production Plan")
+        if result.get('production'):
+            df_production = pd.DataFrame(result['production'])
+            st.dataframe(df_production, use_container_width=True, hide_index=True)
+            st.download_button(
+                "📥 Download Production Plan (CSV)",
+                data=df_production.to_csv(index=False),
+                file_name="production_plan.csv",
+                mime="text/csv"
+            )
+        else:
+            st.info("No production data available")
+    
+    with detail_tab2:
+        st.subheader("Inventory Levels")
+        if result.get('inventory'):
+            df_inventory = pd.DataFrame(result['inventory'])
+            st.dataframe(df_inventory, use_container_width=True, hide_index=True)
+            st.download_button(
+                "📥 Download Inventory Plan (CSV)",
+                data=df_inventory.to_csv(index=False),
+                file_name="inventory_plan.csv",
+                mime="text/csv"
+            )
+        else:
+            st.info("No inventory data available")
+    
+    with detail_tab3:
+        st.subheader("Shipment Plan")
+        if result.get('shipments'):
+            df_shipments = pd.DataFrame(result['shipments'])
+            st.dataframe(df_shipments, use_container_width=True, hide_index=True)
+            st.download_button(
+                "📥 Download Shipment Plan (CSV)",
+                data=df_shipments.to_csv(index=False),
+                file_name="shipment_plan.csv",
+                mime="text/csv"
+            )
+        else:
+            st.info("No shipment data available")
+    
+    with detail_tab4:
+        st.subheader("Cost Breakdown Analysis")
+        
+        # Get cost breakdown from response
+        cost_bd = result.get('cost_breakdown', {})
+        cost_details = result.get('cost_details', {})
+        
+        if cost_bd:
+            # Display cost summary
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                st.metric(
+                    "Production Cost",
+                    format_inr(cost_bd.get('production_cost', 0))
+                )
+            
+            with col2:
+                st.metric(
+                    "Inventory Cost",
+                    format_inr(cost_bd.get('inventory_cost', 0))
+                )
+            
+            with col3:
+                st.metric(
+                    "Transport Variable",
+                    format_inr(cost_bd.get('transport_variable_cost', 0))
+                )
+            
+            with col4:
+                st.metric(
+                    "Trip Fixed Cost",
+                    format_inr(cost_bd.get('trip_cost', 0))
+                )
+            
+            # Breakdown pie chart
+            st.markdown("#### Cost Distribution")
+            
+            breakdown_data = {
+                'Production': cost_bd.get('production_cost', 0),
+                'Inventory': cost_bd.get('inventory_cost', 0),
+                'Transport (Variable)': cost_bd.get('transport_variable_cost', 0),
+                'Trip (Fixed)': cost_bd.get('trip_cost', 0)
+            }
+            
+            fig_breakdown = go.Figure(data=[go.Pie(
+                labels=list(breakdown_data.keys()),
+                values=list(breakdown_data.values()),
+                hole=0.3,
+                marker=dict(colors=['#5A7863', '#90AB8B', '#B8D4C8', '#D6E0D8']),
+                textposition='auto',
+                textinfo='label+percent'
+            )])
+            
+            fig_breakdown.update_layout(
+                height=400,
+                margin=dict(t=30, b=30, l=30, r=30),
+                font=dict(size=13, color='#1F3D2B', family="Arial, sans-serif"),
+                paper_bgcolor='#ffffff',
+                plot_bgcolor='#ffffff',
+                legend=dict(
+                    orientation="h",
+                    yanchor="bottom",
+                    y=-0.2,
+                    xanchor="center",
+                    x=0.5,
+                    font=dict(color="#1F3D2B", size=12)
+                )
+            )
+            
+            st.plotly_chart(fig_breakdown, use_container_width=True)
+            
+            # Cost validation details
+            st.markdown("#### Cost Validation & Transparency")
+            
+            validation_cols = st.columns(3)
+            
+            with validation_cols[0]:
+                st.metric(
+                    "Total (Objective)",
+                    format_inr(result.get('total_cost', 0))
+                )
+            
+            with validation_cols[1]:
+                st.metric(
+                    "Total (Computed)",
+                    format_inr(cost_details.get('computed_total', 0))
+                )
+            
+            with validation_cols[2]:
+                st.metric(
+                    "Variance",
+                    f"₹{cost_details.get('variance', 0):.6f}"
+                )
+            
+            # Validation status
+            is_valid = cost_details.get('breakdown_valid', False)
+            if is_valid:
+                st.success(
+                    f"✅ Cost breakdown verified: Objective total matches computed breakdown "
+                    f"(variance: ₹{cost_details.get('variance', 0):.6f})"
+                )
+            else:
+                st.warning(
+                    f"⚠️ Cost variance detected: {cost_details.get('variance', 0):.2f} "
+                    "(This may indicate solver rounding)"
+                )
+            
+            # Detailed cost table
+            st.markdown("#### Detailed Breakdown")
+            
+            cost_table = pd.DataFrame({
+                'Cost Component': [
+                    'Production',
+                    'Inventory',
+                    'Transport (Variable)',
+                    'Trip (Fixed)',
+                    'Total Transport',
+                    '---',
+                    'TOTAL COST'
+                ],
+                'Amount (₹)': [
+                    format_inr(cost_bd.get('production_cost', 0)),
+                    format_inr(cost_bd.get('inventory_cost', 0)),
+                    format_inr(cost_bd.get('transport_variable_cost', 0)),
+                    format_inr(cost_bd.get('trip_cost', 0)),
+                    format_inr(cost_bd.get('transport_cost', 0)),
+                    '---',
+                    format_inr(result.get('total_cost', 0))
+                ],
+                '% of Total': [
+                    f"{(cost_bd.get('production_cost', 0) / result.get('total_cost', 1)) * 100:.1f}%",
+                    f"{(cost_bd.get('inventory_cost', 0) / result.get('total_cost', 1)) * 100:.1f}%",
+                    f"{(cost_bd.get('transport_variable_cost', 0) / result.get('total_cost', 1)) * 100:.1f}%",
+                    f"{(cost_bd.get('trip_cost', 0) / result.get('total_cost', 1)) * 100:.1f}%",
+                    f"{(cost_bd.get('transport_cost', 0) / result.get('total_cost', 1)) * 100:.1f}%",
+                    '---',
+                    '100.0%'
+                ]
+            })
+            
+            st.dataframe(cost_table, use_container_width=True, hide_index=True)
+        else:
+            st.info("No cost breakdown available")
 
 st.markdown("---")
 
