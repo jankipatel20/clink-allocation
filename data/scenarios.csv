@@ -1,7 +1,0 @@
-scenario,probability,demand_multiplier
-very_low,0.10,0.70
-low,0.20,0.85
-base,0.40,1.00
-high,0.20,1.15
-very_high,0.10,1.30
-
