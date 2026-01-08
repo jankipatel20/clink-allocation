@@ -10,12 +10,12 @@ from pyomo.environ import *
 # LOAD DATA
 # --------------------------------------------------
 # Load CSVs manually
-# nodes = pd.read_csv("data/nodes.csv")
-# periods = pd.read_csv("data/periods.csv")
-# production = pd.read_csv("data/production.csv")
-# demand = pd.read_csv("data/demand.csv")
-# arcs = pd.read_csv("data/arcs.csv")
-# scenarios = pd.read_csv("data/scenarios.csv")
+nodes = pd.read_csv("backend/data/nodes.csv")
+periods = pd.read_csv("backend/data/periods.csv")
+production = pd.read_csv("backend/data/production.csv")
+demand = pd.read_csv("backend/data/demand.csv")
+arcs = pd.read_csv("backend/data/arcs.csv")
+scenarios = pd.read_csv("backend/data/scenarios.csv")
 
 # --------------------------------------------------
 # BUILD MODEL
@@ -289,14 +289,16 @@ def run_optimizer(data: dict):
 
 
 # Run model
-# model = solve_model(
-#     nodes,
-#     periods,
-#     production,
-#     demand,
-#     arcs,
-#     scenarios
-# )
+model, result = solve_model(
+    nodes,
+    periods,
+    production,
+    demand,
+    arcs,
+    scenarios
+)
 
-# print("✅ Model solved successfully")
-# print("Total cost:", model.OBJ())
+print("✅ Model solved successfully")
+print("Total cost:", value(model.OBJ))
+print("Solver status:", result.solver.status)
+print("Termination condition:", result.solver.termination_condition)
