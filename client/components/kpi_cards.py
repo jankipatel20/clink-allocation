@@ -2,7 +2,23 @@ import streamlit as st
 
 def display_kpi_cards():
     """Display KPI cards row"""
-    col1, col2, col3, col4 = st.columns(4)
+    st.markdown(
+        """
+        <style>
+        /* Stretch KPI row edge-to-edge */
+        .kpi-row > div {
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+        }
+        .kpi-card {
+            width: 100%;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    col1, col2, col3, col4 = st.columns(4, gap="large")
 
     with col1:
         st.markdown("""

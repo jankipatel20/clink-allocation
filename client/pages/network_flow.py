@@ -49,10 +49,14 @@ def display_network_flow_tab():
         else:
             node_colors.append('#3B4953')
     
+    # Scale link thickness down so ribbons appear thinner while keeping original volumes in hover
+    value_scale = 0.25
+    scaled_values = [v * value_scale for v in filtered_values]
+
     fig_sankey = go.Figure(data=[go.Sankey(
         node=dict(
-            pad=32,  # more spacing between columns for clearer separation
-            thickness=15,
+            pad=28,
+            thickness=12,
             line=dict(color="white", width=2),
             label=all_nodes,
             color=node_colors
@@ -60,22 +64,22 @@ def display_network_flow_tab():
         link=dict(
             source=source_indices,
             target=target_indices,
-            value=filtered_values,
-            color='rgba(90, 120, 99, 0.3)',
-            hovertemplate='%{source.label} → %{target.label}<br>Volume: %{value} tons<extra></extra>'
+            value=scaled_values,
+            customdata=filtered_values,
+            color='rgba(90, 120, 99, 0.32)',
+            hovertemplate='%{source.label} → %{target.label}<br>Volume: %{customdata} tons<extra></extra>'
         )
     )])
     
     fig_sankey.update_layout(
-        height=450,
-        width=720,  # narrower overall width
-        margin=dict(t=30, b=30, l=20, r=20),
+        height=420,
+        margin=dict(t=30, b=30, l=10, r=10),
         font=dict(size=13, color='#1F3D2B', family="Arial, sans-serif"),
         paper_bgcolor='#ffffff',
         plot_bgcolor='#ffffff'
     )
     
-    st.plotly_chart(fig_sankey, use_container_width=False)
+    st.plotly_chart(fig_sankey, use_container_width=True)
     
     # Data table
     st.markdown("### Flow Details")

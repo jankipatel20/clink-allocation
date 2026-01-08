@@ -342,12 +342,12 @@ div.stButton > button:hover {
     bgcolor: #DCFCE7;
 }
 
-.stVerticalBlock {
+/* .stVerticalBlock {
     gap: .5rem;
     box-shadow: 20 6px 20px rgba(31,61,43,0.12);
     bgcolor: #DCFCE7;
     color: #1F3D2B !important;
-}
+} */
 
 /* ===== Footer ===== */
 .footer-container {

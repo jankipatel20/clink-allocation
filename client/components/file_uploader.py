@@ -1,17 +1,6 @@
 import io
 import streamlit as st
 import pandas as pd
-<<<<<<< HEAD
-import requests
-
-BACKEND_UPLOAD_URL = "http://localhost:8000/upload"
-
-def display_uploader_and_button(nav_right_col):
-    """Display file uploader and optimization button"""
-    # Initialize session state for history
-    if "show_history" not in st.session_state:
-        st.session_state.show_history = False
-=======
 from api_client import BackendAPIClient
 
 def display_uploader_and_button(nav_right_col):
@@ -21,50 +10,30 @@ def display_uploader_and_button(nav_right_col):
         st.session_state.show_history = False
     if "uploaded_file" not in st.session_state:
         st.session_state.uploaded_file = None
->>>>>>> 57081d4c7b3aa07bfd2b1c69688fcd21748be833
     
     with nav_right_col:
+        st.markdown(
+            """
+            <style>
+            /* Align uploader row elements with consistent spacing and size */
+            .upload-actions > div button {
+                width: 100%;
+                padding: 0.75rem 0.9rem;
+                font-weight: 600;
+            }
+            .upload-actions [data-testid="stFileUploaderDropzone"] {
+                padding: 0.6rem;
+                min-height: 52px;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        st.markdown('<div class="upload-actions">', unsafe_allow_html=True)
         # Browse Files, Export CSV, History - in one row
-        col_btn1, col_btn2, col_btn3 = st.columns([1.1, 1, 1])
+        col_btn1, col_btn2, col_btn3 = st.columns(3, gap="small")
         
-<<<<<<< HEAD
-        # $$ the backend upload logic
-
-        with col_btn1:
-            uploaded_files = st.file_uploader(
-                "",
-                type=["csv", "xls", "xlsx"],
-                help="Upload data files (CSV or Excel); they will be sent to the backend",
-                label_visibility="collapsed",
-                accept_multiple_files=True
-            )
-            if uploaded_files:
-                for uploaded_file in uploaded_files:
-                    try:
-                        file_bytes = uploaded_file.getvalue()
-                        ext = uploaded_file.name.split(".")[-1].lower()
-                        buffer = io.BytesIO(file_bytes)
-
-                        if ext == "csv":
-                            _ = pd.read_csv(buffer)
-                        else:
-                            buffer.seek(0)
-                            _ = pd.read_excel(buffer)
-
-                        # send to backend
-                        try:
-                            resp = requests.post(
-                                BACKEND_UPLOAD_URL,
-                                files={"file": (uploaded_file.name, file_bytes, uploaded_file.type or "application/octet-stream")},
-                                timeout=10,
-                            )
-                            resp.raise_for_status()
-                            st.success(f"{uploaded_file.name} uploaded and sent to backend")
-                        except Exception as send_err:
-                            st.error(f"Uploaded locally but failed to send to backend: {send_err}")
-                    except Exception as e:
-                        st.error(f"Error: {str(e)}")
-=======
         with col_btn1:
             uploaded_file = st.file_uploader(
                 "",
@@ -78,7 +47,6 @@ def display_uploader_and_button(nav_right_col):
             if uploaded_file:
                 st.session_state.uploaded_file = uploaded_file
                 st.success(f"✓ {uploaded_file.name} ready")
->>>>>>> 57081d4c7b3aa07bfd2b1c69688fcd21748be833
         
         # Export CSV button
         with col_btn2:
@@ -88,6 +56,8 @@ def display_uploader_and_button(nav_right_col):
         with col_btn3:
             if st.button("History", use_container_width=True):
                 st.session_state.show_history = not st.session_state.show_history
+
+        st.markdown('</div>', unsafe_allow_html=True)
 
         # Run Optimization button - separate container below
         st.markdown("""
@@ -115,10 +85,6 @@ def display_uploader_and_button(nav_right_col):
     return False
 
 def handle_optimization():
-<<<<<<< HEAD
-    """Handle optimization button click"""
-    st.success("Optimization started!")
-=======
     """Handle optimization button click and call backend"""
     
     # Initialize API client
@@ -160,4 +126,3 @@ def handle_optimization():
                 
         except Exception as e:
             st.error(f"❌ Unexpected error: {str(e)}")
->>>>>>> 57081d4c7b3aa07bfd2b1c69688fcd21748be833
