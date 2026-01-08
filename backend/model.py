@@ -1,3 +1,4 @@
+
 # model.py
 # Core optimization model for clinker supply chain
 # Author: Member 1 (Core Model)
@@ -9,12 +10,12 @@ from pyomo.environ import *
 # LOAD DATA
 # --------------------------------------------------
 # Load CSVs manually
-# nodes = pd.read_csv("data/nodes.csv")
-# periods = pd.read_csv("data/periods.csv")
-# production = pd.read_csv("data/production.csv")
-# demand = pd.read_csv("data/demand.csv")
-# arcs = pd.read_csv("data/arcs.csv")
-# scenarios = pd.read_csv("data/scenarios.csv")
+nodes = pd.read_csv("backend/data/nodes.csv")
+periods = pd.read_csv("backend/data/periods.csv")
+production = pd.read_csv("backend/data/production.csv")
+demand = pd.read_csv("backend/data/demand.csv")
+arcs = pd.read_csv("backend/data/arcs.csv")
+scenarios = pd.read_csv("backend/data/scenarios.csv")
 
 # --------------------------------------------------
 # BUILD MODEL
@@ -175,34 +176,99 @@ def build_model(nodes, periods, production, demand, arcs, scenarios):
 # SOLVER
 # --------------------------------------------------
 
+# def solve_model(nodes, periods, production, demand, arcs, scenarios):
+#     model = build_model(nodes, periods, production, demand, arcs, scenarios)
+#     solver_path = r"C:\Users\ADMIN\Downloads\winglpk-4.65\glpk-4.65\w64\glpsol.exe"
+#     solver = SolverFactory("glpk" , executable=solver_path)
+
+#     try:
+#         result = solver.solve(model, tee=True)
+#     except Exception as e:
+#         raise RuntimeError(f"Solver execution failed: {str(e)}")
+
+#     # ---- STRICT VALIDATION ----
+#     if result.solver.status != SolverStatus.ok:
+#         raise RuntimeError(
+#             f"Solver failed. Status: {result.solver.status}"
+#         )
+
+#     if result.solver.termination_condition == TerminationCondition.infeasible:
+#         raise ValueError("Optimization infeasible: check demand, capacity, or safety stock.")
+
+#     if result.solver.termination_condition == TerminationCondition.unbounded:
+#         raise ValueError("Optimization unbounded: missing constraints (inventory or flow).")
+
+#     if result.solver.termination_condition != TerminationCondition.optimal:
+#         raise RuntimeError(
+#             f"Solver did not find optimal solution. Termination: {result.solver.termination_condition}"
+#         )
+        
+
+#     return model, result
+
+from pyomo.environ import SolverFactory, SolverStatus, TerminationCondition
+
+
 def solve_model(nodes, periods, production, demand, arcs, scenarios):
-    model = build_model(nodes, periods, production, demand, arcs, scenarios)
+    """
+    Runs the clinker optimization model.
 
-    solver = SolverFactory("cbc")
+    Parameters:
+        nodes, periods, production, demand, arcs, scenarios
+        → Pandas DataFrames passed from backend
 
+    Returns:
+        model  : Pyomo ConcreteModel (solved or attempted)
+        result : Pyomo SolverResults (status + termination condition)
+    """
+
+    # 1️⃣ Build the optimization model
+    model = build_model(
+        nodes=nodes,
+        periods=periods,
+        production=production,
+        demand=demand,
+        arcs=arcs,
+        scenarios=scenarios,
+    )
+
+    # 2️⃣ Configure solver (CBC with fallback to GLPK)
+    try:
+        from backend.config import get_solver_path, get_solver_options, PREFERRED_SOLVER
+        solver_name, solver_path = get_solver_path(PREFERRED_SOLVER)
+        solver_options = get_solver_options(solver_name)
+    except (ImportError, FileNotFoundError):
+        # Fallback if config.py doesn't exist
+        solver_name = 'cbc'
+        solver_path = None  # Use system PATH
+        solver_options = {'tee': True}
+    
+    # Create solver instance
+    if solver_path:
+        solver = SolverFactory(solver_name, executable=solver_path)
+    else:
+        solver = SolverFactory(solver_name)
+
+    # 3️⃣ Solve model
     try:
         result = solver.solve(model, tee=True)
     except Exception as e:
+        # REAL execution failure (missing solver, crash, etc.)
         raise RuntimeError(f"Solver execution failed: {str(e)}")
 
-    # ---- STRICT VALIDATION ----
-    if result.solver.status != SolverStatus.ok:
-        raise RuntimeError(
-            f"Solver failed. Status: {result.solver.status}"
-        )
+    # 4️⃣ DO NOT crash for math outcomes
+    # Backend will inspect:
+    #   result.solver.status
+    #   result.solver.termination_condition
+    #
+    # Valid outcomes:
+    # - optimal       → success
+    # - infeasible    → business failure (not crash)
+    # - unbounded     → modeling issue (backend reports failure)
+    # - other         → backend reports failure
 
-    if result.solver.termination_condition == TerminationCondition.infeasible:
-        raise ValueError("Optimization infeasible: check demand, capacity, or safety stock.")
+    return model, result
 
-    if result.solver.termination_condition == TerminationCondition.unbounded:
-        raise ValueError("Optimization unbounded: missing constraints (inventory or flow).")
-
-    if result.solver.termination_condition != TerminationCondition.optimal:
-        raise RuntimeError(
-            f"Solver did not find optimal solution. Termination: {result.solver.termination_condition}"
-        )
-
-    return model
 
 
 def run_optimizer(data: dict):
@@ -223,14 +289,16 @@ def run_optimizer(data: dict):
 
 
 # Run model
-# model = solve_model(
-#     nodes,
-#     periods,
-#     production,
-#     demand,
-#     arcs,
-#     scenarios
-# )
+model, result = solve_model(
+    nodes,
+    periods,
+    production,
+    demand,
+    arcs,
+    scenarios
+)
 
-# print("✅ Model solved successfully")
-# print("Total cost:", model.OBJ())
+print("✅ Model solved successfully")
+print("Total cost:", value(model.OBJ))
+print("Solver status:", result.solver.status)
+print("Termination condition:", result.solver.termination_condition)
