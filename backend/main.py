@@ -1,6 +1,6 @@
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
-from typing import List
+from typing import List, Dict, Any
 import pandas as pd
 import io
 
@@ -16,6 +16,91 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+def compute_cost_breakdown(model, data: Dict[str, pd.DataFrame]) -> Dict[str, Any]:
+    """
+    Compute detailed cost breakdown from solved Pyomo model.
+    
+    Returns:
+        {
+            "production_cost": float,
+            "inventory_cost": float,
+            "transport_cost": float,
+            "trip_cost": float,
+            "total_cost": float,
+            "cost_details": {...}  # For transparency/debugging
+        }
+    """
+    # Extract data dictionaries
+    production_df = data["production"]
+    nodes_df = data["nodes"]
+    arcs_df = data["arcs"]
+    
+    prod_cost = production_df.set_index(["node_id", "period_id"])["prod_cost"].to_dict()
+    inv_cost = nodes_df.set_index("node_id")["inv_cost"].to_dict()
+    trans_cost = arcs_df.set_index(["origin", "dest", "mode"])["trans_cost"].to_dict()
+    trip_fixed_cost = 0.01
+    
+    # ===== PRODUCTION COST =====
+    production_cost = 0.0
+    for i in model.N:
+        for t in model.T:
+            prod_val = value(model.Prod[i, t])
+            if prod_val is not None and prod_val > 0:
+                cost_coeff = prod_cost.get((i, t), 0)
+                production_cost += cost_coeff * prod_val
+    
+    # ===== INVENTORY COST =====
+    inventory_cost = 0.0
+    for n in model.N:
+        for t in model.T:
+            inv_val = value(model.Inv[n, t])
+            if inv_val is not None and inv_val > 0:
+                cost_coeff = inv_cost.get(n, 0)
+                inventory_cost += cost_coeff * inv_val
+    
+    # ===== TRANSPORT COST =====
+    # Variable transport cost (quantity-based)
+    transport_variable_cost = 0.0
+    for (i, j, m) in model.ARCS:
+        for t in model.T:
+            qty_val = value(model.X[i, j, m, t])
+            if qty_val is not None and qty_val > 0:
+                cost_coeff = trans_cost.get((i, j, m), 0)
+                transport_variable_cost += cost_coeff * qty_val
+    
+    # Fixed trip cost
+    trip_cost = 0.0
+    for (i, j, m) in model.ARCS:
+        for t in model.T:
+            trips_val = value(model.Trips[i, j, m, t])
+            if trips_val is not None and trips_val > 0:
+                trip_cost += trip_fixed_cost * trips_val
+    
+    transport_cost = transport_variable_cost + trip_cost
+    
+    # ===== TOTALS =====
+    total_cost_computed = production_cost + inventory_cost + transport_cost
+    total_cost_objective = float(value(model.OBJ))
+    
+    # Cost variance (should be negligible, within solver tolerance)
+    cost_variance = abs(total_cost_computed - total_cost_objective)
+    
+    return {
+        "production_cost": round(float(production_cost), 2),
+        "inventory_cost": round(float(inventory_cost), 2),
+        "transport_variable_cost": round(float(transport_variable_cost), 2),
+        "trip_cost": round(float(trip_cost), 2),
+        "transport_cost": round(float(transport_cost), 2),
+        "total_cost": round(float(total_cost_objective), 2),
+        "cost_details": {
+            "computed_total": round(float(total_cost_computed), 2),
+            "objective_total": round(float(total_cost_objective), 2),
+            "variance": round(cost_variance, 6),
+            "breakdown_valid": cost_variance < 1.0  # Within solver tolerance
+        }
+    }
 
 
 @app.get("/health")
@@ -69,8 +154,8 @@ async def run_optimization(files: List[UploadFile] = File(None)):
                 "message": "Optimization infeasible or solver failed"
             }
 
-        # 5️⃣ Extract TOTAL COST
-        total_cost = float(value(model.OBJ))
+        # 5️⃣ Compute cost breakdown
+        cost_breakdown = compute_cost_breakdown(model, data)
 
         # 6️⃣ Extract PRODUCTION
         production_plan = []
@@ -113,10 +198,18 @@ async def run_optimization(files: List[UploadFile] = File(None)):
                         "trips": int(trips) if trips is not None else 0
                     })
 
-        # 9️⃣ FINAL JSON RESPONSE
+        # 9️⃣ FINAL JSON RESPONSE with cost breakdown
         return {
             "status": "success",
-            "total_cost": total_cost,
+            "total_cost": cost_breakdown["total_cost"],
+            "cost_breakdown": {
+                "production_cost": cost_breakdown["production_cost"],
+                "inventory_cost": cost_breakdown["inventory_cost"],
+                "transport_variable_cost": cost_breakdown["transport_variable_cost"],
+                "trip_cost": cost_breakdown["trip_cost"],
+                "transport_cost": cost_breakdown["transport_cost"]
+            },
+            "cost_details": cost_breakdown["cost_details"],
             "production": production_plan,
             "inventory": inventory_plan,
             "shipments": shipment_plan

@@ -1,11 +1,15 @@
 """
-Solver Configuration
+Solver Configuration Template
 
-This file contains solver paths and settings for the optimization model.
-Each developer should configure this file based on their local setup.
+INSTRUCTIONS:
+1. Copy this file to 'config.py' in the same directory
+2. Update the paths below according to your local setup
+3. The config.py file is in .gitignore, so your changes won't cause merge conflicts
 
-IMPORTANT: This file is in .gitignore to avoid merge conflicts.
-Use config.example.py as a template.
+SETUP OPTIONS:
+- Option A: You have conda installed → CBC/GLPK will auto-detect from conda env
+- Option B: You have CBC installed manually → Update CBC_WINDOWS_PATH below
+- Option C: You have GLPK installed manually → Update GLPK_WINDOWS_PATH below
 """
 
 import os
@@ -23,6 +27,10 @@ PREFERRED_SOLVER = 'cbc'
 # ============================================
 
 # For Windows without conda (coin-or CBC installed manually)
+# Common installation paths:
+# - C:\Program Files\CBC\bin\cbc.exe
+# - C:\Program Files (x86)\CBC\bin\cbc.exe
+# - C:\coin-or\CBC\bin\cbc.exe
 CBC_WINDOWS_PATH = r"C:\Program Files\CBC\bin\cbc.exe"
 
 # For conda environment (CBC installed via conda)
@@ -36,6 +44,7 @@ CBC_UNIX_PATH = "cbc"  # Usually in system PATH
 # ============================================
 
 # For Windows GLPK
+# Update this path if you have GLPK installed elsewhere
 GLPK_WINDOWS_PATH = r"C:\Users\ADMIN\Downloads\winglpk-4.65\glpk-4.65\w64\glpsol.exe"
 
 # For conda environment (GLPK installed via conda)

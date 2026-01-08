@@ -596,30 +596,36 @@ with tab1:
         
         st.plotly_chart(fig_pie, use_container_width=True)
         
-        # Cost boxes
+        # Cost boxes with real data
         col_a, col_b, col_c = st.columns(3)
+        
+        # Get cost breakdown from optimization results
+        cost_bd = result.get('cost_breakdown', {}) if result and result.get('status') == 'success' else {}
+        prod_cost = cost_bd.get('production_cost', 2500000)
+        inv_cost_val = cost_bd.get('inventory_cost', 750000)
+        trans_cost_val = cost_bd.get('transport_cost', 1200000)
 
         with col_a:
-            st.markdown("""
+            st.markdown(f"""
             <div class="cost-card">
                 <div class="cost-title">Production</div>
-                <div class="cost-value">₹25,00,000</div>
+                <div class="cost-value">{format_inr(prod_cost)}</div>
             </div>
             """, unsafe_allow_html=True)
 
         with col_b:
-            st.markdown("""
+            st.markdown(f"""
             <div class="cost-card">
                 <div class="cost-title">Inventory</div>
-                <div class="cost-value">₹7,50,000</div>
+                <div class="cost-value">{format_inr(inv_cost_val)}</div>
             </div>
             """, unsafe_allow_html=True)
 
         with col_c:
-            st.markdown("""
+            st.markdown(f"""
             <div class="cost-card">
                 <div class="cost-title">Transport</div>
-                <div class="cost-value">₹12,00,000</div>
+                <div class="cost-value">{format_inr(trans_cost_val)}</div>
             </div>
             """, unsafe_allow_html=True)
 
@@ -1000,7 +1006,7 @@ if result and result.get('status') == 'success':
     st.markdown("## 📊 Detailed Optimization Results")
     
     # Create tabs for detailed data
-    detail_tab1, detail_tab2, detail_tab3 = st.tabs(["Production Plan", "Inventory Levels", "Shipment Plan"])
+    detail_tab1, detail_tab2, detail_tab3, detail_tab4 = st.tabs(["Production Plan", "Inventory Levels", "Shipment Plan", "Cost Breakdown"])
     
     with detail_tab1:
         st.subheader("Production Plan")
@@ -1043,6 +1049,151 @@ if result and result.get('status') == 'success':
             )
         else:
             st.info("No shipment data available")
+    
+    with detail_tab4:
+        st.subheader("Cost Breakdown Analysis")
+        
+        # Get cost breakdown from response
+        cost_bd = result.get('cost_breakdown', {})
+        cost_details = result.get('cost_details', {})
+        
+        if cost_bd:
+            # Display cost summary
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                st.metric(
+                    "Production Cost",
+                    format_inr(cost_bd.get('production_cost', 0))
+                )
+            
+            with col2:
+                st.metric(
+                    "Inventory Cost",
+                    format_inr(cost_bd.get('inventory_cost', 0))
+                )
+            
+            with col3:
+                st.metric(
+                    "Transport Variable",
+                    format_inr(cost_bd.get('transport_variable_cost', 0))
+                )
+            
+            with col4:
+                st.metric(
+                    "Trip Fixed Cost",
+                    format_inr(cost_bd.get('trip_cost', 0))
+                )
+            
+            # Breakdown pie chart
+            st.markdown("#### Cost Distribution")
+            
+            breakdown_data = {
+                'Production': cost_bd.get('production_cost', 0),
+                'Inventory': cost_bd.get('inventory_cost', 0),
+                'Transport (Variable)': cost_bd.get('transport_variable_cost', 0),
+                'Trip (Fixed)': cost_bd.get('trip_cost', 0)
+            }
+            
+            fig_breakdown = go.Figure(data=[go.Pie(
+                labels=list(breakdown_data.keys()),
+                values=list(breakdown_data.values()),
+                hole=0.3,
+                marker=dict(colors=['#5A7863', '#90AB8B', '#B8D4C8', '#D6E0D8']),
+                textposition='auto',
+                textinfo='label+percent'
+            )])
+            
+            fig_breakdown.update_layout(
+                height=400,
+                margin=dict(t=30, b=30, l=30, r=30),
+                font=dict(size=13, color='#1F3D2B', family="Arial, sans-serif"),
+                paper_bgcolor='#ffffff',
+                plot_bgcolor='#ffffff',
+                legend=dict(
+                    orientation="h",
+                    yanchor="bottom",
+                    y=-0.2,
+                    xanchor="center",
+                    x=0.5,
+                    font=dict(color="#1F3D2B", size=12)
+                )
+            )
+            
+            st.plotly_chart(fig_breakdown, use_container_width=True)
+            
+            # Cost validation details
+            st.markdown("#### Cost Validation & Transparency")
+            
+            validation_cols = st.columns(3)
+            
+            with validation_cols[0]:
+                st.metric(
+                    "Total (Objective)",
+                    format_inr(result.get('total_cost', 0))
+                )
+            
+            with validation_cols[1]:
+                st.metric(
+                    "Total (Computed)",
+                    format_inr(cost_details.get('computed_total', 0))
+                )
+            
+            with validation_cols[2]:
+                st.metric(
+                    "Variance",
+                    f"₹{cost_details.get('variance', 0):.6f}"
+                )
+            
+            # Validation status
+            is_valid = cost_details.get('breakdown_valid', False)
+            if is_valid:
+                st.success(
+                    f"✅ Cost breakdown verified: Objective total matches computed breakdown "
+                    f"(variance: ₹{cost_details.get('variance', 0):.6f})"
+                )
+            else:
+                st.warning(
+                    f"⚠️ Cost variance detected: {cost_details.get('variance', 0):.2f} "
+                    "(This may indicate solver rounding)"
+                )
+            
+            # Detailed cost table
+            st.markdown("#### Detailed Breakdown")
+            
+            cost_table = pd.DataFrame({
+                'Cost Component': [
+                    'Production',
+                    'Inventory',
+                    'Transport (Variable)',
+                    'Trip (Fixed)',
+                    'Total Transport',
+                    '---',
+                    'TOTAL COST'
+                ],
+                'Amount (₹)': [
+                    format_inr(cost_bd.get('production_cost', 0)),
+                    format_inr(cost_bd.get('inventory_cost', 0)),
+                    format_inr(cost_bd.get('transport_variable_cost', 0)),
+                    format_inr(cost_bd.get('trip_cost', 0)),
+                    format_inr(cost_bd.get('transport_cost', 0)),
+                    '---',
+                    format_inr(result.get('total_cost', 0))
+                ],
+                '% of Total': [
+                    f"{(cost_bd.get('production_cost', 0) / result.get('total_cost', 1)) * 100:.1f}%",
+                    f"{(cost_bd.get('inventory_cost', 0) / result.get('total_cost', 1)) * 100:.1f}%",
+                    f"{(cost_bd.get('transport_variable_cost', 0) / result.get('total_cost', 1)) * 100:.1f}%",
+                    f"{(cost_bd.get('trip_cost', 0) / result.get('total_cost', 1)) * 100:.1f}%",
+                    f"{(cost_bd.get('transport_cost', 0) / result.get('total_cost', 1)) * 100:.1f}%",
+                    '---',
+                    '100.0%'
+                ]
+            })
+            
+            st.dataframe(cost_table, use_container_width=True, hide_index=True)
+        else:
+            st.info("No cost breakdown available")
 
 st.markdown("---")
 

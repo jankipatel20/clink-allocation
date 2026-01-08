@@ -1,2 +1,8 @@
 __pycache__/
 *.pyc
+
+# Local configuration (each developer has their own)
+backend/config.py
+
+# Keep the example config in git
+!backend/config.example.py

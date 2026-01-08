@@ -232,9 +232,22 @@ def solve_model(nodes, periods, production, demand, arcs, scenarios):
         scenarios=scenarios,
     )
 
-    # 2️⃣ Configure solver (GLPK)
-    solver_path = r"C:\Users\ADMIN\Downloads\winglpk-4.65\glpk-4.65\w64\glpsol.exe"
-    solver = SolverFactory("glpk", executable=solver_path)
+    # 2️⃣ Configure solver (CBC with fallback to GLPK)
+    try:
+        from backend.config import get_solver_path, get_solver_options, PREFERRED_SOLVER
+        solver_name, solver_path = get_solver_path(PREFERRED_SOLVER)
+        solver_options = get_solver_options(solver_name)
+    except (ImportError, FileNotFoundError):
+        # Fallback if config.py doesn't exist
+        solver_name = 'cbc'
+        solver_path = None  # Use system PATH
+        solver_options = {'tee': True}
+    
+    # Create solver instance
+    if solver_path:
+        solver = SolverFactory(solver_name, executable=solver_path)
+    else:
+        solver = SolverFactory(solver_name)
 
     # 3️⃣ Solve model
     try:
