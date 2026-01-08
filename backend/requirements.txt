@@ -1,0 +1,9 @@
+fastapi==0.115.0
+uvicorn[standard]==0.31.0
+pandas==2.2.3
+pyomo==6.9.3
+pulp==2.9.0  # CBC solver included
+pydantic==2.9.2
+python-multipart==0.0.9
+python-dotenv==1.0.1
+pulp==2.9.0
