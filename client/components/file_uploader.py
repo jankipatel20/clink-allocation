@@ -1,5 +1,9 @@
+import io
 import streamlit as st
 import pandas as pd
+import requests
+
+BACKEND_UPLOAD_URL = "http://localhost:8000/upload"
 
 def display_uploader_and_button(nav_right_col):
     """Display file uploader and optimization button"""
@@ -11,19 +15,40 @@ def display_uploader_and_button(nav_right_col):
         # Browse Files, Export CSV, History - in one row
         col_btn1, col_btn2, col_btn3 = st.columns([1.1, 1, 1])
         
+        # $$ the backend upload logic
+
         with col_btn1:
             uploaded_files = st.file_uploader(
                 "",
-                type=["csv"],
-                help="Upload CSV data files",
+                type=["csv", "xls", "xlsx"],
+                help="Upload data files (CSV or Excel); they will be sent to the backend",
                 label_visibility="collapsed",
                 accept_multiple_files=True
             )
             if uploaded_files:
                 for uploaded_file in uploaded_files:
                     try:
-                        uploaded_data = pd.read_csv(uploaded_file)
-                        st.success(f"✅ {uploaded_file.name} uploaded!")
+                        file_bytes = uploaded_file.getvalue()
+                        ext = uploaded_file.name.split(".")[-1].lower()
+                        buffer = io.BytesIO(file_bytes)
+
+                        if ext == "csv":
+                            _ = pd.read_csv(buffer)
+                        else:
+                            buffer.seek(0)
+                            _ = pd.read_excel(buffer)
+
+                        # send to backend
+                        try:
+                            resp = requests.post(
+                                BACKEND_UPLOAD_URL,
+                                files={"file": (uploaded_file.name, file_bytes, uploaded_file.type or "application/octet-stream")},
+                                timeout=10,
+                            )
+                            resp.raise_for_status()
+                            st.success(f"{uploaded_file.name} uploaded and sent to backend")
+                        except Exception as send_err:
+                            st.error(f"Uploaded locally but failed to send to backend: {send_err}")
                     except Exception as e:
                         st.error(f"Error: {str(e)}")
         
