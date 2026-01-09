@@ -261,7 +261,8 @@ div.stButton > button:hover {
     background: #ffffff;
     border-radius: 16px;
     height: 140px;
-    width: 300px;
+    width: 400px;
+    gap: 2rem;
     padding: 10px 10px 10px 10px;
     margin-top: 24px;
     box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);

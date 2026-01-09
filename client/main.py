@@ -8,7 +8,6 @@ from components.navbar import display_navbar, display_section_nav
 from components.kpi_cards import display_kpi_cards
 from components.file_uploader import display_uploader_and_button, handle_optimization
 from components.footer import display_footer
-from components.floating_whatsapp import display_floating_whatsapp
 
 # Import pages
 from pages.overview import display_overview_tab
@@ -134,6 +133,3 @@ elif selected_tab == "Inventory":
 
 # ===== Footer =====
 display_footer()
-
-# ===== Floating WhatsApp Button =====
-display_floating_whatsapp()

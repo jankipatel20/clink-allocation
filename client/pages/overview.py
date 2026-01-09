@@ -23,14 +23,19 @@ def display_overview_tab():
 def display_cost_breakdown():
     """Display cost breakdown pie chart and cards"""
     
-    # Pie chart data
+    # Real data from latest optimization output
+    total_production_cost = 20285344588.41
+    total_inventory_cost = 566891.57
+    total_transport_cost = 956895249.57
+    total_cost = total_production_cost + total_inventory_cost + total_transport_cost
+    
     costs = {
-        'Production Cost': 2.50,
-        'Inventory Cost': 0.75,
-        'Transport Cost': 1.00
+        'Production Cost': total_production_cost,
+        'Transportation Cost': total_transport_cost,
+        'Inventory Cost': total_inventory_cost
     }
     
-    colors = ['#5A7863', "#90AB8B", '#3B4953']
+    colors = ['#5A7863', '#3B4953', "#90AB8B"]
     
     fig_pie = go.Figure(data=[go.Pie(
         labels=list(costs.keys()),
@@ -68,30 +73,35 @@ def display_cost_breakdown():
     
     st.plotly_chart(fig_pie, use_container_width=True)
     
+    # Format costs for display
+    prod_cost = total_production_cost / 1e9
+    trans_cost = total_transport_cost / 1e9
+    inv_cost = total_inventory_cost / 1e6
+    
     # Cost boxes
     col_a, col_b, col_c = st.columns(3)
 
     with col_a:
-        st.markdown("""
+        st.markdown(f"""
         <div class="cost-card">
             <div class="cost-title">Production</div>
-            <div class="cost-value">$2.50M</div>
+            <div class="cost-value">₹{prod_cost:.2f}B</div>
         </div>
         """, unsafe_allow_html=True)
 
     with col_b:
-        st.markdown("""
+        st.markdown(f"""
         <div class="cost-card">
-            <div class="cost-title">Inventory</div>
-            <div class="cost-value">$0.75M</div>
+            <div class="cost-title">Transportation</div>
+            <div class="cost-value">₹{trans_cost:.2f}B</div>
         </div>
         """, unsafe_allow_html=True)
 
     with col_c:
-        st.markdown("""
+        st.markdown(f"""
         <div class="cost-card">
-            <div class="cost-title">Transport</div>
-            <div class="cost-value">$1.20M</div>
+            <div class="cost-title">Inventory</div>
+            <div class="cost-value">₹{inv_cost:.2f}M</div>
         </div>
         """, unsafe_allow_html=True)
 
