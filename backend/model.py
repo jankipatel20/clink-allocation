@@ -174,7 +174,7 @@ def run_clinker_optimization(file_path):
         # ==================================================
         # SOLVE
         # ==================================================
-        solver = SolverFactory("cbc")
+        solver = SolverFactory("cbc") #glpk, gurobi solvers can be used
         result = solver.solve(model, tee=False)
 
         if result.solver.termination_condition == TerminationCondition.optimal:
