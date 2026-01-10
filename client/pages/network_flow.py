@@ -7,9 +7,20 @@ def display_network_flow_tab():
     st.subheader("Network Flow Visualization")
     st.caption("Clinker transportation routes and volumes")
 
-    # Real transport plan data from optimization output
-    # Format: (source, target, mode, period, trips, qty, cost)
-    transport_data = [
+    # Check if backend data is available
+    backend_result = st.session_state.get("optimization_result")
+    
+    if backend_result and backend_result.get("status") == "success":
+        # Use backend data - convert to expected format
+        shipments = backend_result.get("shipments", [])
+        transport_data = [
+            (s["from"], s["to"], s["mode"], int(s["period"]), s["trips"], s["quantity"], s["quantity"] * 10)
+            for s in shipments
+        ]
+    else:
+        # Fallback to mock data
+        # Format: (source, target, mode, period, trips, qty, cost)
+        transport_data = [
         ('IU_015', 'GU_007', 'T2', 1, 13, 39000.00, 17343.30),
         ('IU_003', 'GU_008', 'T2', 1, 8, 24000.00, 8543.77),
         ('IU_015', 'GU_003', 'T2', 1, 14, 42000.00, 22667.96),

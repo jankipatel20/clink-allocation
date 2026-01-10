@@ -7,8 +7,20 @@ def display_inventory_tab():
     st.subheader("Inventory Cost Analysis")
     st.caption("Track inventory holding costs across nodes")
     
-    # Real inventory cost data from optimization (IU & GU nodes)
-    inventory_data = [
+    # Check if backend data is available
+    backend_result = st.session_state.get("optimization_result")
+    
+    if backend_result and backend_result.get("status") == "success":
+        # Use backend data - convert to expected format
+        inventory = backend_result.get("inventory", [])
+        inventory_data = [
+            (i["node"], int(i["period"]), i["quantity"] * 10)  # multiply by 10 for cost proxy
+            for i in inventory
+        ]
+    else:
+        # Fallback to mock data
+        # Format: (node, period, cost)
+        inventory_data = [
         ('IU_002', 1, 245.32),
         ('IU_003', 1, 187.64),
         ('IU_004', 2, 421.78),
