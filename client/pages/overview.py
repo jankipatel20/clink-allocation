@@ -23,10 +23,25 @@ def display_overview_tab():
 def display_cost_breakdown():
     """Display cost breakdown pie chart and cards"""
     
-    # Real data from latest optimization output
-    total_production_cost = 20285344588.41
-    total_inventory_cost = 566891.57
-    total_transport_cost = 956895249.57
+    # Check if backend data is available
+    backend_result = st.session_state.get("optimization_result")
+    
+    if backend_result and backend_result.get("status") == "success":
+        # Use backend data
+        production = backend_result.get("production", [])
+        shipments = backend_result.get("shipments", [])
+        inventory = backend_result.get("inventory", [])
+        
+        # Calculate costs from backend data (simplified - using quantity as proxy)
+        total_production_cost = sum(p.get("quantity", 0) for p in production) * 1000
+        total_transport_cost = sum(s.get("quantity", 0) for s in shipments) * 100
+        total_inventory_cost = sum(i.get("quantity", 0) for i in inventory) * 10
+    else:
+        # Fallback to mock data
+        total_production_cost = 20285344588.41
+        total_inventory_cost = 566891.57
+        total_transport_cost = 956895249.57
+    
     total_cost = total_production_cost + total_inventory_cost + total_transport_cost
     
     costs = {
