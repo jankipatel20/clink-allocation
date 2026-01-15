@@ -31,13 +31,13 @@ class BackendAPIClient:
         except requests.exceptions.RequestException:
             return False
     
-    def run_optimization(self, files: Optional[List] = None) -> Dict[str, Any]:
+    def run_optimization(self, uploaded_file: Optional[Any] = None) -> Dict[str, Any]:
         """
         Send optimization request to backend
         
         Args:
-            files: Optional list of uploaded files (UploadedFile objects from Streamlit)
-                   If None, backend will use data from disk
+            uploaded_file: Optional Streamlit UploadedFile object (Excel file)
+                          If None, backend will use default Excel file
         
         Returns:
             Dictionary containing optimization results:
@@ -51,23 +51,20 @@ class BackendAPIClient:
             }
         """
         try:
-            if files:
-                # Prepare files for upload
-                files_dict = []
-                for uploaded_file in files:
-                    # Reset file pointer to beginning
-                    uploaded_file.seek(0)
-                    files_dict.append(
-                        ("files", (uploaded_file.name, uploaded_file, "text/csv"))
-                    )
+            if uploaded_file:
+                # Prepare Excel file for upload
+                uploaded_file.seek(0)
+                files = {
+                    "file": (uploaded_file.name, uploaded_file, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                }
                 
                 response = requests.post(
                     f"{self.base_url}/optimize",
-                    files=files_dict,
+                    files=files,
                     timeout=300  # 5 minutes timeout for optimization
                 )
             else:
-                # No files, backend will use default data
+                # No file, backend will use default Excel
                 response = requests.post(
                     f"{self.base_url}/optimize",
                     timeout=300

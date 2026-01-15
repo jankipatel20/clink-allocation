@@ -1,222 +1,226 @@
-from fastapi import FastAPI, UploadFile, File
+import os
+import shutil
+from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from typing import List, Dict, Any
-import pandas as pd
-import io
+import json
 
-from pyomo.environ import value, TerminationCondition
-from backend.data_loader import load_data_from_disk
+from backend.model import run_clinker_optimization
+from backend import config
 
-app = FastAPI(title="Clinker Optimization API")
 
-# Allow frontend (Streamlit) to talk to backend
+app = FastAPI()
+
+# Enable CORS for frontend connection
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # Allow all origins (Streamlit runs on different port)
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
-def compute_cost_breakdown(model, data: Dict[str, pd.DataFrame]) -> Dict[str, Any]:
-    """
-    Compute detailed cost breakdown from solved Pyomo model.
-    
-    Returns:
-        {
-            "production_cost": float,
-            "inventory_cost": float,
-            "transport_cost": float,
-            "trip_cost": float,
-            "total_cost": float,
-            "cost_details": {...}  # For transparency/debugging
-        }
-    """
-    # Extract data dictionaries
-    production_df = data["production"]
-    nodes_df = data["nodes"]
-    arcs_df = data["arcs"]
-    
-    prod_cost = production_df.set_index(["node_id", "period_id"])["prod_cost"].to_dict()
-    inv_cost = nodes_df.set_index("node_id")["inv_cost"].to_dict()
-    trans_cost = arcs_df.set_index(["origin", "dest", "mode"])["trans_cost"].to_dict()
-    trip_fixed_cost = 0.01
-    
-    # ===== PRODUCTION COST =====
-    production_cost = 0.0
-    for i in model.N:
-        for t in model.T:
-            prod_val = value(model.Prod[i, t])
-            if prod_val is not None and prod_val > 0:
-                cost_coeff = prod_cost.get((i, t), 0)
-                production_cost += cost_coeff * prod_val
-    
-    # ===== INVENTORY COST =====
-    inventory_cost = 0.0
-    for n in model.N:
-        for t in model.T:
-            inv_val = value(model.Inv[n, t])
-            if inv_val is not None and inv_val > 0:
-                cost_coeff = inv_cost.get(n, 0)
-                inventory_cost += cost_coeff * inv_val
-    
-    # ===== TRANSPORT COST =====
-    # Variable transport cost (quantity-based)
-    transport_variable_cost = 0.0
-    for (i, j, m) in model.ARCS:
-        for t in model.T:
-            qty_val = value(model.X[i, j, m, t])
-            if qty_val is not None and qty_val > 0:
-                cost_coeff = trans_cost.get((i, j, m), 0)
-                transport_variable_cost += cost_coeff * qty_val
-    
-    # Fixed trip cost
-    trip_cost = 0.0
-    for (i, j, m) in model.ARCS:
-        for t in model.T:
-            trips_val = value(model.Trips[i, j, m, t])
-            if trips_val is not None and trips_val > 0:
-                trip_cost += trip_fixed_cost * trips_val
-    
-    transport_cost = transport_variable_cost + trip_cost
-    
-    # ===== TOTALS =====
-    total_cost_computed = production_cost + inventory_cost + transport_cost
-    total_cost_objective = float(value(model.OBJ))
-    
-    # Cost variance (should be negligible, within solver tolerance)
-    cost_variance = abs(total_cost_computed - total_cost_objective)
-    
-    return {
-        "production_cost": round(float(production_cost), 2),
-        "inventory_cost": round(float(inventory_cost), 2),
-        "transport_variable_cost": round(float(transport_variable_cost), 2),
-        "trip_cost": round(float(trip_cost), 2),
-        "transport_cost": round(float(transport_cost), 2),
-        "total_cost": round(float(total_cost_objective), 2),
-        "cost_details": {
-            "computed_total": round(float(total_cost_computed), 2),
-            "objective_total": round(float(total_cost_objective), 2),
-            "variance": round(cost_variance, 6),
-            "breakdown_valid": cost_variance < 1.0  # Within solver tolerance
-        }
-    }
-
-
+# ==================================================
+# HEALTH CHECK ENDPOINT
+# ==================================================
 @app.get("/health")
 def health_check():
-    return {"status": "ok"}
+    """Check if backend is running"""
+    return {"status": "ok", "message": "Backend is running"}
 
 
+# ==================================================
+# OPTIMIZATION ENDPOINT
+# ==================================================
 @app.post("/optimize")
-async def run_optimization(files: List[UploadFile] = File(None)):
-    from backend.model import solve_model  # lazy import
+def optimize(file: UploadFile = File(...)):
+    """
+    Load Excel file (uploaded) → Run optimization → Return results
+    
+    Flow:
+    1. Receive uploaded Excel file (required)
+    2. Run clinker optimization model from Excel
+    3. Return results as JSON
+    """
 
     try:
-        # 1️⃣ Load data
-        if files:
-            data = {}
-            for file in files:
-                content = await file.read()
-                df = pd.read_csv(io.BytesIO(content))
-                key = file.filename.replace(".csv", "").lower()
-                data[key] = df
-        else:
-            data = load_data_from_disk()
+        # -------------------------------
+        # Step 1: Validate and save file
+        # -------------------------------
+        # Validate file type
+        if not file.filename.endswith((".xlsx", ".xls")):
+            raise HTTPException(
+                status_code=400, 
+                detail="Only .xlsx or .xls files are supported"
+            )
 
-        # 2️⃣ Validate required datasets
-        required_keys = {
-            "nodes", "periods", "production",
-            "demand", "arcs", "scenarios"
-        }
-        missing = required_keys - data.keys()
-        if missing:
-            return {
-                "status": "error",
-                "message": f"Missing required CSV files: {list(missing)}"
-            }
+        # Save uploaded file
+        excel_path = os.path.join(config.UPLOAD_DIR, file.filename)
+        os.makedirs(config.UPLOAD_DIR, exist_ok=True)
 
-        # 3️⃣ Run optimization model
-        model, result = solve_model(
-            data["nodes"],
-            data["periods"],
-            data["production"],
-            data["demand"],
-            data["arcs"],
-            data["scenarios"],
-        )
+        with open(excel_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
 
-        # 4️⃣ Check solver outcome
-        if result.solver.termination_condition != TerminationCondition.optimal:
+        # -------------------------------
+        # Step 2: Run optimization
+        # -------------------------------
+        try:
+            result = run_clinker_optimization(excel_path)
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Optimization failed: {str(e)}"
+            )
+
+        # -------------------------------
+        # Step 3: Check result and format
+        # -------------------------------
+        if not result.get("success"):
             return {
                 "status": "failed",
-                "solver_status": str(result.solver.termination_condition),
-                "message": "Optimization infeasible or solver failed"
+                "message": result.get("message", "Unknown error"),
+                "success": False
             }
 
-        # 5️⃣ Compute cost breakdown
-        cost_breakdown = compute_cost_breakdown(model, data)
-
-        # 6️⃣ Extract PRODUCTION
-        production_plan = []
-        for i in model.N:
-            for t in model.T:
-                qty = model.Prod[i, t].value
-                if qty is not None and qty > 0:
-                    production_plan.append({
-                        "node_id": i,
-                        "period_id": int(t),
-                        "quantity": float(qty)
-                    })
-
-        # 7️⃣ Extract INVENTORY
-        inventory_plan = []
-        for n in model.N:
-            for t in model.T:
-                qty = model.Inv[n, t].value
-                if qty is not None:
-                    inventory_plan.append({
-                        "node_id": n,
-                        "period_id": int(t),
-                        "quantity": float(qty)
-                    })
-
-        # 8️⃣ Extract SHIPMENTS + TRIPS
-        shipment_plan = []
-        for (o, d, m) in model.ARCS:
-            for t in model.T:
-                qty = model.X[o, d, m, t].value
-                trips = model.Trips[o, d, m, t].value
-
-                if qty is not None and qty > 0:
-                    shipment_plan.append({
-                        "origin": o,
-                        "destination": d,
-                        "mode": m,
-                        "period_id": int(t),
-                        "quantity": float(qty),
-                        "trips": int(trips) if trips is not None else 0
-                    })
-
-        # 9️⃣ FINAL JSON RESPONSE with cost breakdown
-        return {
+        # Extract key data from result
+        response = {
             "status": "success",
-            "total_cost": cost_breakdown["total_cost"],
-            "cost_breakdown": {
-                "production_cost": cost_breakdown["production_cost"],
-                "inventory_cost": cost_breakdown["inventory_cost"],
-                "transport_variable_cost": cost_breakdown["transport_variable_cost"],
-                "trip_cost": cost_breakdown["trip_cost"],
-                "transport_cost": cost_breakdown["transport_cost"]
-            },
-            "cost_details": cost_breakdown["cost_details"],
-            "production": production_plan,
-            "inventory": inventory_plan,
-            "shipments": shipment_plan
+            "success": True,
+            "message": result.get("message", "Optimization completed"),
+            "objective_value": result.get("objective_value"),
+            "solver": "CBC",
+            "production": [],
+            "shipments": [],
+            "inventory": []
         }
+
+        # Extract production data
+        model = result.get("model")
+        if model:
+            try:
+                from pyomo.environ import value
+                
+                # Production
+                production = []
+                for i in model.IU:
+                    for t in model.T:
+                        qty = float(value(model.Prod[i, t]))
+                        if qty > 0.01:
+                            production.append({
+                                "node": str(i),
+                                "period": str(t),
+                                "quantity": round(qty, 2)
+                            })
+                
+                response["production"] = production
+                
+                # Shipments
+                shipments = []
+                for (i, j, m) in model.ARCS:
+                    for t in model.T:
+                        qty = float(value(model.X[i, j, m, t]))
+                        trips = int(value(model.Trips[i, j, m, t]))
+                        if qty > 0.01:
+                            shipments.append({
+                                "from": str(i),
+                                "to": str(j),
+                                "mode": str(m),
+                                "period": str(t),
+                                "quantity": round(qty, 2),
+                                "trips": trips
+                            })
+                
+                response["shipments"] = shipments
+                
+                # Inventory
+                inventory = []
+                for n in model.N:
+                    for t in model.T:
+                        qty = float(value(model.Inv[n, t]))
+                        if qty > 0.01:
+                            inventory.append({
+                                "node": str(n),
+                                "period": str(t),
+                                "quantity": round(qty, 2)
+                            })
+                
+                response["inventory"] = inventory
+                
+                # Summary
+                response["summary"] = {
+                    "total_production": sum(p["quantity"] for p in production),
+                    "total_shipments": sum(s["quantity"] for s in shipments),
+                    "total_trips": sum(s["trips"] for s in shipments),
+                    "num_nodes": len(model.N),
+                    "num_periods": len(model.T)
+                }
+                
+            except Exception as e:
+                # If extraction fails, return basic result
+                response["warning"] = f"Could not extract full results: {str(e)}"
+        
+        return response
+
+    except HTTPException:
+        raise
 
     except Exception as e:
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Unexpected error: {str(e)}"
+        )
+
+
+# ==================================================
+# DEBUG ENDPOINTS
+# ==================================================
+@app.get("/debug/sheets")
+def debug_sheets():
+    """List all sheets in the default Excel file"""
+    try:
+        import pandas as pd
+        
+        if not os.path.exists(config.DEFAULT_EXCEL_PATH):
+            raise HTTPException(status_code=404, detail="Default Excel file not found")
+        
+        excel_data = pd.read_excel(
+            config.DEFAULT_EXCEL_PATH, 
+            sheet_name=None, 
+            engine='openpyxl'
+        )
+        
         return {
-            "status": "error",
-            "message": str(e)
+            "excel_path": config.DEFAULT_EXCEL_PATH,
+            "sheets": list(excel_data.keys()),
+            "sheet_info": {
+                name: {"rows": df.shape[0], "columns": df.shape[1]}
+                for name, df in excel_data.items()
+            }
         }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/debug/sheet-preview/{sheet_name}")
+def debug_sheet_preview(sheet_name: str):
+    """Preview first 5 rows of a specific sheet"""
+    try:
+        import pandas as pd
+        
+        if not os.path.exists(config.DEFAULT_EXCEL_PATH):
+            raise HTTPException(status_code=404, detail="Default Excel file not found")
+        
+        df = pd.read_excel(
+            config.DEFAULT_EXCEL_PATH, 
+            sheet_name=sheet_name,
+            engine='openpyxl'
+        )
+        
+        return {
+            "sheet_name": sheet_name,
+            "shape": df.shape,
+            "columns": df.columns.tolist(),
+            "preview": df.head(5).to_dict(orient="records")
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

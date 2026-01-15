@@ -1,59 +1,69 @@
-#For loading .csv data files from backend/data directory
-
-# data_loader.py
-# Responsibility:
-# - Read CSV files from backend/data/
-# - Load them into Pandas DataFrames
-# - Return them as a clean dictionary
-#
-# NO model logic
-# NO FastAPI logic
-# NO validation (yet)
-
 import os
 import pandas as pd
 
 
-def load_data_from_disk(base_path: str | None = None) -> dict:
-    """
-    Loads all required CSV files from disk and returns them as DataFrames.
+# ==================================================
+# CONFIG
+# ==================================================
+REQUIRED_CSVS = {
+    "ClinkerDemand": "ClinkerDemand.csv",
+    "ClinkerCapacity": "ClinkerCapacity.csv",
+    "ProductionCost": "ProductionCost.csv",
+    "LogisticsIUGU": "LogisticsIUGU.csv",
+    "IUGUConstraint": "IUGUConstraint.csv",
+    "IUGUOpeningStock": "IUGUOpeningStock.csv",
+    "IUGUClosingStock": "IUGUClosingStock.csv",
+    "IUGUType": "IUGUType.csv",
+}
 
-    Parameters:
-        base_path (str | None): Path to data directory.
-                                 Defaults to backend/data/
+
+# ==================================================
+# CORE FUNCTION
+# ==================================================
+def load_data(data_dir: str) -> dict:
+    """
+    Loads required CSV files into pandas DataFrames.
+
+    Args:
+        data_dir (str): Directory containing CSV files
 
     Returns:
-        dict: {
-            "nodes": DataFrame,
-            "periods": DataFrame,
-            "production": DataFrame,
-            "demand": DataFrame,
-            "arcs": DataFrame,
-            "scenarios": DataFrame
-        }
+        dict: DataFrames keyed exactly as model.py expects
+
+    Raises:
+        FileNotFoundError: if CSV directory or files are missing
+        ValueError: if CSV files are empty
     """
 
-    # Resolve default data path → backend/data/
-    if base_path is None:
-        CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-        base_path = os.path.join(CURRENT_DIR, "data")
+    if not os.path.exists(data_dir):
+        raise FileNotFoundError(f"Data directory not found: {data_dir}")
 
-    # File paths
-    paths = {
-        "nodes": os.path.join(base_path, "nodes.csv"),
-        "periods": os.path.join(base_path, "periods.csv"),
-        "production": os.path.join(base_path, "production.csv"),
-        "demand": os.path.join(base_path, "demand.csv"),
-        "arcs": os.path.join(base_path, "arcs.csv"),
-        "scenarios": os.path.join(base_path, "scenarios.csv"),
-    }
-
-    # Load CSVs into DataFrames
     data = {}
-    for key, path in paths.items():
-        if not os.path.exists(path):
-            raise FileNotFoundError(f"Missing required file: {path}")
 
-        data[key] = pd.read_csv(path)
+    for key, filename in REQUIRED_CSVS.items():
+        path = os.path.join(data_dir, filename)
+
+        if not os.path.exists(path):
+            raise FileNotFoundError(f"Missing required CSV: {filename}")
+
+        df = pd.read_csv(path)
+
+        if df.empty:
+            raise ValueError(f"CSV file is empty: {filename}")
+
+        data[key] = df
 
     return data
+
+
+# ==================================================
+# LOCAL TEST SUPPORT
+# ==================================================
+if __name__ == "__main__":
+    DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
+
+    print("📦 Loading CSV data...")
+    loaded_data = load_data(DATA_DIR)
+
+    for k, v in loaded_data.items():
+        print(f"{k}: {v.shape}")

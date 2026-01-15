@@ -1,161 +1,25 @@
-"""
-Solver Configuration
-
-This file contains solver paths and settings for the optimization model.
-Each developer should configure this file based on their local setup.
-
-IMPORTANT: This file is in .gitignore to avoid merge conflicts.
-Use config.example.py as a template.
-"""
+# For configuring solver paths based on environment
 
 import os
-import platform
+from pyomo.environ import SolverFactory
 
-# ============================================
-# SOLVER CONFIGURATION
-# ============================================
-
-# Preferred solver: 'cbc' or 'glpk'
-PREFERRED_SOLVER = 'cbc'
-
-# ============================================
-# CBC SOLVER PATHS
-# ============================================
-
-# For Windows without conda (coin-or CBC installed manually)
-CBC_WINDOWS_PATH = r"C:\Program Files\CBC\bin\cbc.exe"
-
-# For conda environment (CBC installed via conda)
-CBC_CONDA_PATH = None  # Will auto-detect from conda environment
-
-# For Linux/Mac
-CBC_UNIX_PATH = "cbc"  # Usually in system PATH
-
-# ============================================
-# GLPK SOLVER PATHS (Backup)
-# ============================================
-
-# For Windows GLPK
-GLPK_WINDOWS_PATH = r"C:\Users\ADMIN\Downloads\winglpk-4.65\glpk-4.65\w64\glpsol.exe"
-
-# For conda environment (GLPK installed via conda)
-GLPK_CONDA_PATH = None  # Will auto-detect from conda environment
-
-# For Linux/Mac
-GLPK_UNIX_PATH = "glpsol"  # Usually in system PATH
-
-# ============================================
-# SOLVER OPTIONS
-# ============================================
-
-# CBC solver options
-CBC_OPTIONS = {
-    'tee': True,  # Show solver output
-    'keepfiles': False,  # Don't keep temporary files
-    'warmstart': False,
-}
-
-# GLPK solver options
-GLPK_OPTIONS = {
-    'tee': True,  # Show solver output
-}
-
-# Timeout in seconds (0 = no timeout)
-SOLVER_TIMEOUT = 300  # 5 minutes
-
-# ============================================
-# AUTO-DETECTION FUNCTIONS
-# ============================================
-
-def get_solver_path(solver_name='cbc'):
-    """
-    Auto-detect solver path based on operating system and environment.
+def get_solver():
+    # 1. Look for a manual path set in the terminal (For YOU)
+    manual_path = os.getenv("SOLVER_PATH")
     
-    Args:
-        solver_name: 'cbc' or 'glpk'
+    if manual_path:
+        # Use your manual cbc.exe
+        return SolverFactory("cbc", executable=manual_path)
     
-    Returns:
-        tuple: (solver_name, solver_path or None)
-    """
-    system = platform.system()
-    
-    if solver_name.lower() == 'cbc':
-        # Check if running in conda environment
-        if 'CONDA_PREFIX' in os.environ:
-            # Running in conda - CBC should be in PATH
-            return 'cbc', None  # None means use PATH
-        
-        # Not in conda - use manual installation path
-        if system == 'Windows':
-            if os.path.exists(CBC_WINDOWS_PATH):
-                return 'cbc', CBC_WINDOWS_PATH
-            else:
-                # Try to find cbc.exe in common locations
-                common_paths = [
-                    r"C:\Program Files\CBC\bin\cbc.exe",
-                    r"C:\Program Files (x86)\CBC\bin\cbc.exe",
-                    r"C:\coin-or\CBC\bin\cbc.exe",
-                ]
-                for path in common_paths:
-                    if os.path.exists(path):
-                        return 'cbc', path
-                # If not found, return None to try PATH
-                return 'cbc', None
-        else:
-            # Linux/Mac - use system PATH
-            return 'cbc', CBC_UNIX_PATH
-    
-    elif solver_name.lower() == 'glpk':
-        # Check if running in conda environment
-        if 'CONDA_PREFIX' in os.environ:
-            return 'glpk', None  # Use PATH
-        
-        # Not in conda - use manual installation path
-        if system == 'Windows':
-            if os.path.exists(GLPK_WINDOWS_PATH):
-                return 'glpk', GLPK_WINDOWS_PATH
-            else:
-                return 'glpk', None
-        else:
-            return 'glpk', GLPK_UNIX_PATH
-    
-    else:
-        raise ValueError(f"Unknown solver: {solver_name}")
+    # 2. Fallback for Team (Conda) or Docker
+    # This assumes 'cbc' is in their system PATH
+    return SolverFactory("cbc")
 
+import os
 
-def get_solver_options(solver_name='cbc'):
-    """
-    Get solver-specific options.
-    
-    Args:
-        solver_name: 'cbc' or 'glpk'
-    
-    Returns:
-        dict: Solver options
-    """
-    if solver_name.lower() == 'cbc':
-        return CBC_OPTIONS.copy()
-    elif solver_name.lower() == 'glpk':
-        return GLPK_OPTIONS.copy()
-    else:
-        return {'tee': True}
+BASE_DIR = os.path.dirname(__file__)
 
+DATA_DIR = os.path.join(BASE_DIR, "data")
+UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
 
-# ============================================
-# CONFIGURATION SUMMARY
-# ============================================
-
-if __name__ == "__main__":
-    print("=" * 60)
-    print("SOLVER CONFIGURATION")
-    print("=" * 60)
-    print(f"Operating System: {platform.system()}")
-    print(f"Preferred Solver: {PREFERRED_SOLVER}")
-    print(f"Conda Environment: {'Yes' if 'CONDA_PREFIX' in os.environ else 'No'}")
-    print()
-    
-    solver, path = get_solver_path(PREFERRED_SOLVER)
-    print(f"Solver: {solver}")
-    print(f"Path: {path if path else 'Using system PATH'}")
-    print(f"Options: {get_solver_options(solver)}")
-    print("=" * 60)
+DEFAULT_EXCEL_PATH = os.path.join(BASE_DIR, "dataset.xlsx")
