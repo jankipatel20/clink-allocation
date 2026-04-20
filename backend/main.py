@@ -23,6 +23,9 @@ app.add_middleware(
 # ==================================================
 # HEALTH CHECK ENDPOINT
 # ==================================================
+@app.get("/")
+def home():
+    return {"message": "Welcome to the Clinker Optimization API. Use /optimize to run optimization."}
 @app.get("/health")
 def health_check():
     """Check if backend is running"""
