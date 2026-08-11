@@ -6,9 +6,11 @@ import requests
 import streamlit as st
 from typing import Dict, List, Optional, Any
 
-# Configurable via BACKEND_URL env var — defaults to localhost for local dev.
-# In Docker, docker-compose sets this to http://backend:8000
-_DEFAULT_BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
+# Check st.secrets first (for Streamlit Cloud), then os.environ (for Docker), then fallback to localhost
+try:
+    _DEFAULT_BACKEND_URL = st.secrets.get("BACKEND_URL", os.getenv("BACKEND_URL", "http://localhost:8000"))
+except Exception:
+    _DEFAULT_BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 
 
 class BackendAPIClient:
@@ -122,7 +124,7 @@ class BackendAPIClient:
 
 # Cache the API client instance
 @st.cache_resource
-def get_api_client(backend_url: str = "http://localhost:8000") -> BackendAPIClient:
+def get_api_client(backend_url: str = _DEFAULT_BACKEND_URL) -> BackendAPIClient:
     """
     Get or create a cached API client instance
     
