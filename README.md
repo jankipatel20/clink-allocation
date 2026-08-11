@@ -1,8 +1,8 @@
 # 🏭 Clinker Allocation & Optimization System
 
 [![Live Demo](https://img.shields.io/badge/Live_Demo-Streamlit_Cloud-FF4B4B?style=for-the-badge&logo=streamlit)](https://clink-allocation.streamlit.app/)
-[![Backend](https://img.shields.io/badge/Backend-FastAPI-009688?style=for-the-badge&logo=fastapi)](https://clink-allocation.onrender.com/docs)
-[![Solver](https://img.shields.io/badge/Solver-CBC%20%2F%20Pyomo-blue?style=for-the-badge)]()
+[![Backend](https://img.shields.io/badge/Backend-FastAPI-009688?style=for-the-badge&logo=fastapi)]
+[![Solver](https://img.shields.io/badge/Solver-CBC%20%2F%20Pyomo-blue?style=for-the-badge)]
 
 A full-stack Operations Research (OR) web application designed to solve complex supply chain routing and production problems. This system uses Mixed Integer Linear Programming (MILP) to minimize total logistics and production costs for clinker distribution across multiple plants and markets.
 
