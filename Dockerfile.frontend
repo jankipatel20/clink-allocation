@@ -1,0 +1,20 @@
+# ================================
+# Frontend — Streamlit Dashboard
+# ================================
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# Install Python dependencies first (cached layer)
+COPY client/requirements.txt ./client/requirements.txt
+RUN pip install --no-cache-dir -r client/requirements.txt
+
+# Copy the full project (frontend imports relative to project root)
+COPY . .
+
+EXPOSE 8501
+
+# BACKEND_URL can be overridden at runtime (e.g. http://backend:8000 in Docker)
+ENV BACKEND_URL=http://localhost:8000
+
+CMD ["streamlit", "run", "client/main.py", "--server.port=8501", "--server.address=0.0.0.0"]

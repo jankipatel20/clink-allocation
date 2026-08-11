@@ -1,20 +1,26 @@
 """
 API Client for connecting Streamlit frontend to FastAPI backend
 """
+import os
 import requests
 import streamlit as st
 from typing import Dict, List, Optional, Any
+
+# Configurable via BACKEND_URL env var — defaults to localhost for local dev.
+# In Docker, docker-compose sets this to http://backend:8000
+_DEFAULT_BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 
 
 class BackendAPIClient:
     """Client for communicating with the optimization backend"""
     
-    def __init__(self, base_url: str = "http://localhost:8000"):
+    def __init__(self, base_url: str = _DEFAULT_BACKEND_URL):
         """
         Initialize the API client
-        
+
         Args:
-            base_url: Base URL of the FastAPI backend
+            base_url: Base URL of the FastAPI backend.
+                      Defaults to BACKEND_URL env var or http://localhost:8000.
         """
         self.base_url = base_url
     

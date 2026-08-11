@@ -1,0 +1,35 @@
+version: "3.9"
+
+services:
+  # ================================
+  # Backend — FastAPI + CBC Solver
+  # ================================
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: clinker-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      # Persist run history and uploads across container restarts
+      - ./backend/runs:/app/backend/runs
+      - ./backend/uploads:/app/backend/uploads
+    restart: unless-stopped
+
+  # ================================
+  # Frontend — Streamlit Dashboard
+  # ================================
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: clinker-frontend
+    ports:
+      - "8501:8501"
+    depends_on:
+      - backend
+    environment:
+      # Inside Docker, use the service name as hostname
+      - BACKEND_URL=http://backend:8000
+    restart: unless-stopped
