@@ -178,10 +178,29 @@ def run_clinker_optimization(file_path):
         result = solver.solve(model, tee=False)
 
         if result.solver.termination_condition == TerminationCondition.optimal:
+            # Calculate individual cost components
+            production_cost = sum(
+                prod_cost.get((i, t), 0) * value(model.Prod[i, t])
+                for i in model.IU for t in model.T
+            )
+            transport_cost = sum(
+                trip_cost.get((i, j, m), 0) * value(model.Trips[i, j, m, t])
+                for (i, j, m) in model.ARCS for t in model.T
+            )
+            inventory_cost = sum(
+                SETTINGS["HOLDING_COST"] * value(model.Inv[n, t])
+                for n in model.N for t in model.T
+            )
+
             return {
                 "success": True,
                 "message": "Optimization completed successfully",
                 "objective_value": value(model.OBJ),
+                "cost_breakdown": {
+                    "production": round(float(production_cost), 2),
+                    "transport": round(float(transport_cost), 2),
+                    "inventory": round(float(inventory_cost), 2)
+                },
                 "model": model
             }
 

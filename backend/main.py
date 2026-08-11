@@ -157,6 +157,11 @@ def optimize(file: UploadFile = File(...)):
                     "num_nodes": len(model.N),
                     "num_periods": len(model.T)
                 }
+
+                # Cost breakdown (computed in model.py from actual solver values)
+                cost_breakdown = result.get("cost_breakdown")
+                if cost_breakdown:
+                    response["cost_breakdown"] = cost_breakdown
                 
             except Exception as e:
                 # If extraction fails, return basic result
