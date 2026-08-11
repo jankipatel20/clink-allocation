@@ -1,7 +1,12 @@
 /* ===== Base Styles ===== */
-h3 {
-    color: #1F3D2B !important;   /* dark green */
-    font-weight: 700;
+h1, h2, h3, h4, h5, h6 {
+    color: #f1f5f9 !important;
+    font-weight: 600;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+p, span, div {
+    color: #cbd5e1;
 }
 
 [data-testid="stMainBlockContainer"]{
@@ -11,19 +16,12 @@ h3 {
 
 /* ===== App Background ===== */
 .stApp {
-    background-color: #F4F7F2;
+    background-color: #0f172a;
 }
 
-/* Subheaders */
-[data-testid="stSubheader"] {
-    color: #1F3D2B !important;
-    font-weight: 700 !important;
-}
-
-/* Captions */
-[data-testid="stCaptionContainer"] {
-    color: #1F3D2B !important;
-    font-weight: 700 !important;
+/* Subheaders & Captions */
+[data-testid="stSubheader"], [data-testid="stCaptionContainer"] {
+    color: #94a3b8 !important;
 }
 
 /* ===== Global Card Styling ===== */
@@ -31,64 +29,59 @@ h3 {
 [data-testid="stMetric"],
 [data-testid="stContainer"],
 [data-testid="stDataFrame"] {
-    background-color: #FFFFFF;
-    border-radius: 14px;
-    border: 1px solid #D6E0D8;
-    box-shadow: 0 6px 18px rgba(31, 61, 43, 0.12);
+    background-color: #1e293b;
+    border-radius: 4px;
+    border: 1px solid #334155;
+    box-shadow: none;
 }
 
 /* ===== Tabs ===== */
 .stTabs [data-baseweb="tab-list"] {
     background: transparent;
-    gap: 12px;
+    gap: 8px;
 }
 
 .stTabs [data-baseweb="tab"] {
-    background-color: #FFFFFF;
-    border: 1px solid #D6E0D8;
-    border-radius: 12px;
-    padding: 12px 22px;
-    color: #1F3D2B;
-    box-shadow: 0 4px 12px rgba(31,61,43,0.1);
+    background-color: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 4px;
+    padding: 10px 20px;
+    color: #94a3b8;
+    box-shadow: none;
+    font-family: 'Courier New', Courier, monospace;
+    font-weight: 600;
 }
 
 .stTabs [aria-selected="true"] {
-    background-color: #1F3D2B !important;
-    color: #FFFFFF !important;
+    background-color: #f97316 !important; /* Orange accent */
+    color: #ffffff !important;
+    border-color: #ea580c !important;
 }
 
 /* ===== Buttons ===== */
 .stButton > button {
-    background-color: #FFFFFF;
-    color: #1F3D2B;
-    border: 1px solid #1F3D2B;
-    border-radius: 10px;
-    font-weight: 600;
-    box-shadow: 0 4px 12px rgba(31,61,43,0.15);
+    background-color: #1e293b;
+    color: #f1f5f9;
+    border: 1px solid #475569;
+    border-radius: 4px;
+    font-family: 'Courier New', Courier, monospace;
+    font-weight: bold;
+    text-transform: uppercase;
 }
 
 .stButton > button[kind="primary"] {
-    background-color: #1F3D2B;
-    color: #FFFFFF;
+    background-color: #f97316;
+    color: #ffffff;
+    border-color: #ea580c;
 }
 
 .stButton > button:hover {
-    transform: translateY(-1px);
+    border-color: #f97316;
+    color: #f97316;
 }
-
-/* ===== Text ===== */
-h1, h2, h3 {
-    color: #1F3D2B !important;
-}
-
-.stCaption {
-    color: #23451D !important;
-    font-weight: 500;
-}
-
-.stElementContainer {
-    box-shadow: 20 6px 20px rgba(31,61,43,0.12);
-    bgcolor: #DCFCE7;
+.stButton > button[kind="primary"]:hover {
+    background-color: #ea580c;
+    color: #ffffff;
 }
 
 /* ===== Navbar ===== */
@@ -96,35 +89,21 @@ h1, h2, h3 {
     position: sticky;
     top: 0;
     z-index: 999;
-    background: rgba(31,61,43,0.85);
-    padding: 10px 18px;
-    border-bottom: 1px solid #D6E0D8;
-    border-radius:10px;
-    box-shadow: 0 6px 20px rgba(31,61,43,0.18);
+    background: #0f172a;
+    padding: 12px 20px;
+    border-bottom: 2px solid #f97316; /* Orange stripe */
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
 
 .nav-left {
-    font-size: 26px;
-    font-weight: 600;
-    color: white;
-}
-
-/* Style Streamlit button */
-div.stButton > button {
-    background: #1F3D2B;
-    color: white;
-    border-radius: 8px;
-    padding: 10px 22px;
-    font-weight: 600;
-    font-size: 16px;
-    border: none;
-}
-
-div.stButton > button:hover {
-    background: #3e8e41;
+    font-size: 22px;
+    font-weight: bold;
+    color: #f1f5f9;
+    font-family: 'Courier New', Courier, monospace;
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
 /* Style File Uploader to look like a button */
@@ -134,7 +113,11 @@ div.stButton > button:hover {
     margin: 0;
 }
 
-[data-testid="stFileUploader"] > label {
+[data-testid="stFileUploader"] > label,
+[data-testid="stFileUploader"] section > div:nth-child(1),
+[data-testid="stFileUploader"] section > div:nth-child(2),
+[data-testid="stFileUploader"] section + div,
+[data-testid="stFileUploader"] section div {
     display: none !important;
 }
 
@@ -145,19 +128,6 @@ div.stButton > button:hover {
     margin: 0 !important;
 }
 
-/* Hide drag-and-drop text, dropzone, and status */
-[data-testid="stFileUploader"] section > div:nth-child(1),
-[data-testid="stFileUploader"] section > div:nth-child(2),
-[data-testid="stFileUploader"] section + div {
-    display: none !important;
-}
-
-/* Hide any remaining helper text inside the section */
-[data-testid="stFileUploader"] section div {
-    display: none !important;
-}
-
-/* Hide native input but keep it functional */
 [data-testid="stFileUploader"] input[type="file"] {
     opacity: 0;
     height: 0;
@@ -165,231 +135,175 @@ div.stButton > button:hover {
     position: absolute;
 }
 
-/* Style the visible button */
 [data-testid="stFileUploader"] button {
-    background: #1F3D2B;
-    color: white;
-    border-radius: 8px;
+    background: #334155;
+    color: #f1f5f9;
+    border-radius: 4px;
     padding: 10px 22px;
-    font-weight: 600;
-    font-size: 16px;
-    border: none;
+    font-family: 'Courier New', Courier, monospace;
+    font-weight: bold;
+    text-transform: uppercase;
+    border: 1px solid #475569;
     width: 100%;
-    margin: 0;
-}
-
-[data-testid="stFileUploader"] button svg,
-[data-testid="stFileUploader"] button p,
-[data-testid="stFileUploader"] button div,
-[data-testid="stFileUploader"] button span {
-    display: none;
-}
-
-[data-testid="stFileUploader"] button::after {
 }
 
 [data-testid="stFileUploader"] button:hover {
-    background: #3e8e41;
+    background: #475569;
+    border-color: #f97316;
 }
 
 /* ===== Metrics ===== */
 [data-testid="stMetric"] {
-    background-color: #FFFFFF;
-    border: 1px solid #D6E0D8;
-    border-radius: 12px;
-    padding: 20px 24px;
+    background-color: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 4px;
+    padding: 16px 20px;
     width: 100%;
-    box-shadow: none !important;
-    transition: all 0.2s ease;
-}
-
-[data-testid="stMetric"]:hover {
-    border-color: #1F3D2B;
+    border-left: 4px solid #f97316; /* Industrial left stripe */
 }
 
 [data-testid="stMetricLabel"] {
-    color: #5A7863 !important;
-    font-size: 14px !important;
-    font-weight: 600 !important;
-    margin-bottom: 4px !important;
+    color: #94a3b8 !important;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 13px !important;
+    font-weight: bold !important;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 [data-testid="stMetricValue"] {
-    color: #1F3D2B !important;
-    font-size: 28px !important;
-    font-weight: 800 !important;
-    font-family: 'Arial', sans-serif;
+    color: #f1f5f9 !important;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 32px !important;
+    font-weight: bold !important;
 }
 
 [data-testid="stMetricDelta"] {
-    font-weight: 600;
-    font-size: 14px;
-    margin-top: 6px;
-}
-
-[data-testid="stMetric"] > div {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
+    font-family: 'Courier New', Courier, monospace;
+    font-weight: bold;
 }
 
 /* ===== Cost Cards ===== */
 .cost-card {
-    background: #FFFFFF;
-    border: 1px solid #D6E0D8;
-    border-radius: 14px;
-    padding: 18px;
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 4px;
+    padding: 16px;
     text-align: center;
-    box-shadow: 0 6px 18px rgba(31,61,43,0.14);
+    border-top: 3px solid #38bdf8;
 }
 
 .cost-title {
-    color: #1F3D2B;
-    font-weight: 700;
-    font-size: 16px;
+    color: #94a3b8;
+    font-family: 'Courier New', Courier, monospace;
+    font-weight: bold;
+    font-size: 14px;
+    text-transform: uppercase;
 }
 
 .cost-value {
-    color: #1F3D2B;
-    font-size: 22px;
-    font-weight: 800;
-    margin-top: 6px;
+    color: #f1f5f9;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 24px;
+    font-weight: bold;
+    margin-top: 8px;
 }
 
 /* ===== KPI Cards ===== */
 .kpi-card {
-    background: #ffffff;
-    border-radius: 16px;
-    height: 140px;
+    background: #1e293b;
+    border-radius: 4px;
+    height: 120px;
     width: 400px;
-    gap: 2rem;
-    padding: 10px 10px 10px 10px;
+    padding: 16px;
     margin-top: 24px;
-    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
-    border: 1px solid #E5E7EB;
+    border: 1px solid #334155;
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
 
 .kpi-left h4 {
-    margin: 0;
-    padding: 0;
-    font-size: 14px;
-    color: #475569;
-    font-weight: 600;
+    color: #94a3b8;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 13px;
+    text-transform: uppercase;
 }
 
 .kpi-left h2 {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0;
-    font-size: 25px;
-    font-weight: 800;
-    padding: 0 0 4px 0;
-    color: #0F172A;
+    color: #f1f5f9;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 28px;
+    font-weight: bold;
 }
 
 .kpi-pill {
     display: inline-block;
-    padding: 6px 12px;
-    font-size: 13px;
-    font-weight: 600;
-    border-radius: 999px;
-    background: #DCFCE7;
-    color: #16A34A;
+    padding: 4px 10px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 12px;
+    font-weight: bold;
+    border-radius: 2px;
+    background: #334155;
+    color: #e2e8f0;
 }
 
 .kpi-icon {
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    border-radius: 4px;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 20px;
+    background: #334155;
 }
 
-.blue { 
-    background: #DBEAFE; 
-    color: #2563EB; 
-}
-
-.green { 
-    background: #DCFCE7; 
-    color: #16A34A; 
-}
-
-.purple { 
-    background: #F3E8FF; 
-    color: #7C3AED; 
-}
-
-.yellow { 
-    background: #FEF3C7; 
-    color: #D97706; 
-}
+/* Utilities for icons */
+.blue { border-bottom: 2px solid #38bdf8; }
+.green { border-bottom: 2px solid #22c55e; }
+.purple { border-bottom: 2px solid #a855f7; }
+.yellow { border-bottom: 2px solid #eab308; }
 
 /* ===== Alert & Containers ===== */
 .stAlertContainer {
-    background-color: #DCFCE7 !important;
-    color: #1F3D2B !important;
-    border-radius: 8px !important;
+    background-color: #334155 !important;
+    color: #f1f5f9 !important;
+    border-radius: 4px !important;
+    border-left: 4px solid #eab308 !important;
 }
-
-.stColumn {
-    box-shadow: 20 6px 20px rgba(31,61,43,0.12);
-    bgcolor: #DCFCE7;
-}
-
-/* .stVerticalBlock {
-    gap: .5rem;
-    box-shadow: 20 6px 20px rgba(31,61,43,0.12);
-    bgcolor: #DCFCE7;
-    color: #1F3D2B !important;
-} */
 
 /* ===== Footer ===== */
 .footer-container {
     padding: 20px;
-    background: white;
-    border-radius: 12px;
-    border: 1px solid #ddd;
+    background: #1e293b;
+    border-radius: 4px;
+    border: 1px solid #334155;
 }
 
 .footer-title {
-    font-size: 18px;
-    font-weight: 500;
-    margin-bottom: 18px;
-    color: #0f172a;
+    font-family: 'Courier New', Courier, monospace;
+    color: #f1f5f9;
+    text-transform: uppercase;
 }
 
 .footer-section {
-    font-size: 13px;
-    font-weight: 600;
-    color: #0f172a;
-}
-
-.footer-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 36px;
+    color: #94a3b8;
 }
 
 /* ===== Dropdown/Select ===== */
 div[data-baseweb="select"] > div {
-    background-color: #FFFFFF !important;
-    border: 1px solid #1F3D2B !important;
-    color: #1F3D2B !important;
-    border-radius: 8px;
+    background-color: #1e293b !important;
+    border: 1px solid #475569 !important;
+    color: #f1f5f9 !important;
+    border-radius: 4px;
 }
 
 div[data-baseweb="select"] span {
-    color: #1F3D2B !important;
-    font-weight: 600;
+    color: #f1f5f9 !important;
 }
 
-div[data-baseweb="select"] svg {
-    fill: #1F3D2B !important;
+/* Hide plotly toolbar by default */
+.modebar {
+    display: none !important;
 }

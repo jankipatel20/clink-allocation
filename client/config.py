@@ -12,10 +12,11 @@ def setup_page():
 
 def setup_plotly_theme():
     """Configure Plotly theme"""
-    pio.templates["custom_light"] = pio.templates["plotly_white"]
-    pio.templates["custom_light"].layout.legend.font.color = "#1F3D2B"
-    pio.templates["custom_light"].layout.font.color = "#1a1a1a"
-    pio.templates.default = "custom_light"
+    pio.templates["custom_dark"] = pio.templates["plotly_dark"]
+    pio.templates["custom_dark"].layout.paper_bgcolor = "#1e293b"
+    pio.templates["custom_dark"].layout.plot_bgcolor = "#1e293b"
+    pio.templates["custom_dark"].layout.font.color = "#f8fafc"
+    pio.templates.default = "custom_dark"
 
 def load_css(css_file):
     """Load CSS from external file"""

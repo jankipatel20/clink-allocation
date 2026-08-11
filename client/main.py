@@ -45,64 +45,63 @@ with col_tabs:
 
         /* 2. Box/Label Styling */
         div[role="radiogroup"] label {
-            background-color: #f8f9fa;
+            background-color: #1e293b;
             padding: 0.6rem 1.2rem;
-            border-radius: 8px;
-            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            border: 1px solid #334155;
             cursor: pointer;
-            transition: all 0.2s ease;
             margin-right: 0 !important;
             display: flex;
             align-items: center;
         }
 
-        /* 3. Text Color (Green) */
+        /* 3. Text Color */
         div[role="radiogroup"] label p {
-            color: #1F3D2B !important; 
+            color: #94a3b8 !important; 
             font-weight: 600;
+            font-family: 'Courier New', Courier, monospace;
             font-size: 1rem;
             margin: 0;
+            text-transform: uppercase;
         }
 
         /* 4. RESET THE RADIO BUTTON (The Fix) */
         div[role="radiogroup"] input[type="radio"] {
-            /* This forcefully hides the default Red/Black dot */
             -webkit-appearance: none !important; 
             -moz-appearance: none !important;
             appearance: none !important;
             
-            /* Define our own shape */
-            width: 18px !important;
-            height: 18px !important;
-            border-radius: 50% !important;
+            width: 14px !important;
+            height: 14px !important;
+            border-radius: 2px !important; /* square look */
             outline: none !important;
             margin-right: 10px;
             cursor: pointer;
             
-            /* Default State (Unchecked) - Grey Ring */
             background-color: transparent !important;
-            border: 2px solid #9ca3af !important;
+            border: 2px solid #475569 !important;
         }
 
-        /* 5. ACTIVE STATE (Checked) - Green Dot */
+        /* 5. ACTIVE STATE (Checked) - Orange Square */
         div[role="radiogroup"] input[type="radio"]:checked {
-            /* Turn the circle Green */
-            background-color: #2d5f3f !important; 
-            border-color: #2d5f3f !important;
-            
-            /* This 'inset shadow' creates the white gap inside the green circle */
-            box-shadow: inset 0 0 0 3px white !important; 
+            background-color: #f97316 !important; 
+            border-color: #ea580c !important;
+            box-shadow: inset 0 0 0 2px #1e293b !important; 
         }
 
         /* 6. Active Box Styling */
         div[role="radiogroup"] label:has(input:checked) {
-            background-color: #e8f5e9 !important;
-            border-color: #2d5f3f !important;
+            background-color: #334155 !important;
+            border-color: #f97316 !important;
         }
         
+        div[role="radiogroup"] label:has(input:checked) p {
+            color: #f1f5f9 !important;
+        }
+
         /* 7. Hover Effects */
         div[role="radiogroup"] label:hover {
-            border-color: #2d5f3f;
+            border-color: #f97316;
         }
         </style>
         """,
