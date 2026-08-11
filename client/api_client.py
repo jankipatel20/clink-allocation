@@ -34,7 +34,8 @@ class BackendAPIClient:
             True if backend is healthy, False otherwise
         """
         try:
-            response = requests.get(f"{self.base_url}/health", timeout=5)
+            # Render free tier can take up to 50s to wake up from sleep
+            response = requests.get(f"{self.base_url}/health", timeout=60)
             return response.status_code == 200 and response.json().get("status") == "ok"
         except requests.exceptions.RequestException:
             return False

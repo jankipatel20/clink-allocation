@@ -163,7 +163,7 @@ def handle_optimization():
     # Check backend health
     with st.spinner("Connecting to backend..."):
         if not api_client.health_check():
-            st.error("❌ Backend is not running. Please start the backend server:\n\n`uvicorn backend.main:app --reload`")
+            st.error(f"❌ Backend is not running at `{api_client.base_url}`. Please start the backend server:\n\n`uvicorn backend.main:app --reload`")
             return
     
     # Run optimization
