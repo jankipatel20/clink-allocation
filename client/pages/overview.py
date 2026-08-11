@@ -27,15 +27,12 @@ def display_cost_breakdown():
     backend_result = st.session_state.get("optimization_result")
     
     if backend_result and backend_result.get("status") == "success":
-        # Use backend data
-        production = backend_result.get("production", [])
-        shipments = backend_result.get("shipments", [])
-        inventory = backend_result.get("inventory", [])
-        
-        # Calculate costs from backend data (simplified - using quantity as proxy)
-        total_production_cost = sum(p.get("quantity", 0) for p in production) * 1000
-        total_transport_cost = sum(s.get("quantity", 0) for s in shipments) * 100
-        total_inventory_cost = sum(i.get("quantity", 0) for i in inventory) * 10
+        # Use real cost breakdown from solver
+        cost_breakdown = backend_result.get("cost_breakdown", {})
+        total_production_cost = cost_breakdown.get("production", 0)
+        total_transport_cost  = cost_breakdown.get("transport", 0)
+        total_inventory_cost  = cost_breakdown.get("inventory", 0)
+
     else:
         # Fallback to mock data
         total_production_cost = 20285344588.41
