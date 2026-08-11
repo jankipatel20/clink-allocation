@@ -1,1 +1,8 @@
--r client/requirements.txt
+streamlit
+plotly
+pandas
+numpy
+requests
+openpyxl
+pillow
+python-dateutil
