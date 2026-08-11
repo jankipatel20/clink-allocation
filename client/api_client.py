@@ -24,7 +24,7 @@ class BackendAPIClient:
             base_url: Base URL of the FastAPI backend.
                       Defaults to BACKEND_URL env var or http://localhost:8000.
         """
-        self.base_url = base_url
+        self.base_url = base_url.rstrip("/")
     
     def health_check(self) -> bool:
         """
