@@ -119,23 +119,46 @@ def display_cost_breakdown():
 
 
 def display_history_panel():
-    """Display optimization history panel with previous runs"""
+    """Display optimization history panel with previous runs from the backend"""
     st.subheader("Optimization History")
     st.caption("Previous run results")
-    
-    # Mock history data with varied costs and scenarios
+
+    # Fetch real history from backend
+    from api_client import BackendAPIClient
+    client = BackendAPIClient()
+    data = client.get_history()
+    runs = data.get("runs", [])
+
+    if not runs:
+        st.info("No optimization runs recorded yet. Run an optimization to see history here.")
+        return
+
+    # Build display table
     history_data = {
-        'Run #': ['#5', '#4', '#3', '#2', '#1'],
-        'Date': ['2024-01-08 14:32', '2024-01-08 11:15', '2024-01-07 16:45', '2024-01-07 09:20', '2024-01-06 13:10'],
-        'Total': ['$4.25M', '$4.85M', '$3.95M', '$5.20M', '$4.50M'],
-        'Prod': ['$2.50M', '$2.80M', '$2.35M', '$3.10M', '$2.65M'],
-        'Inv': ['$0.75M', '$1.05M', '$0.60M', '$1.20M', '$0.90M'],
-        'Trans': ['$1.00M', '$1.00M', '$1.00M', '$0.90M', '$0.95M'],
-        'Status': ['Optimal', 'Feasible', 'Optimal', ' Feasible', 'Optimal']
+        'Run #': [f"#{i+1}" for i in range(len(runs))],
+        'Date': [r.get("timestamp", "—") for r in runs],
+        'File': [r.get("filename", "—") for r in runs],
+        'Total (₹B)': [
+            f"₹{r['objective_value']/1e9:.2f}B" if r.get("objective_value") else "—"
+            for r in runs
+        ],
+        'Prod (₹B)': [
+            f"₹{r['cost_breakdown']['production']/1e9:.2f}B" if r.get("cost_breakdown") else "—"
+            for r in runs
+        ],
+        'Trans (₹B)': [
+            f"₹{r['cost_breakdown']['transport']/1e9:.2f}B" if r.get("cost_breakdown") else "—"
+            for r in runs
+        ],
+        'Inv (₹M)': [
+            f"₹{r['cost_breakdown']['inventory']/1e6:.2f}M" if r.get("cost_breakdown") else "—"
+            for r in runs
+        ],
+        'Status': [r.get("status", "—").capitalize() for r in runs],
     }
-    
+
     df_history = pd.DataFrame(history_data)
-    
+
     # Display as styled table
     styled_df = (
         df_history.style
@@ -159,16 +182,20 @@ def display_history_panel():
             }]
         )
     )
-    
+
     st.table(styled_df)
-    
-    # Summary stats
+
+    # Real summary stats
+    objective_values = [r["objective_value"] for r in runs if r.get("objective_value")]
+    best_cost = min(objective_values) if objective_values else None
+    avg_cost  = sum(objective_values) / len(objective_values) if objective_values else None
+
     st.markdown("### Summary")
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.metric("Total Runs", "5", "Latest")
+        st.metric("Total Runs", len(runs))
     with col2:
-        st.metric("Best Cost", "$3.95M", "↓ 7.1%")
+        st.metric("Best Cost", f"₹{best_cost/1e9:.2f}B" if best_cost else "—")
     with col3:
-        st.metric("Avg Cost", "$4.55M", "")
+        st.metric("Avg Cost", f"₹{avg_cost/1e9:.2f}B" if avg_cost else "—")
 
