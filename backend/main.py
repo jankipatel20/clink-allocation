@@ -1,11 +1,58 @@
 import os
 import shutil
+import json
+from datetime import datetime
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-import json
 
 from backend.model import run_clinker_optimization
 from backend import config
+
+
+# ==================================================
+# HISTORY HELPERS
+# ==================================================
+HISTORY_FILE = os.path.join(os.path.dirname(__file__), "runs", "history.json")
+
+def save_run_to_history(filename: str, response: dict):
+    """Append a completed optimization run to the history JSON file"""
+    os.makedirs(os.path.dirname(HISTORY_FILE), exist_ok=True)
+
+    # Load existing history
+    history = []
+    if os.path.exists(HISTORY_FILE):
+        try:
+            with open(HISTORY_FILE, "r") as f:
+                history = json.load(f)
+        except (json.JSONDecodeError, IOError):
+            history = []
+
+    # Build the run record
+    summary = response.get("summary", {})
+    cost_breakdown = response.get("cost_breakdown", {})
+    run = {
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "filename": filename,
+        "status": response.get("status", "unknown"),
+        "objective_value": response.get("objective_value"),
+        "cost_breakdown": {
+            "production": cost_breakdown.get("production", 0),
+            "transport": cost_breakdown.get("transport", 0),
+            "inventory": cost_breakdown.get("inventory", 0),
+        },
+        "summary": {
+            "total_production": summary.get("total_production", 0),
+            "total_shipments": summary.get("total_shipments", 0),
+            "total_trips": summary.get("total_trips", 0),
+        }
+    }
+
+    # Prepend so newest is first, keep last 20 runs
+    history.insert(0, run)
+    history = history[:20]
+
+    with open(HISTORY_FILE, "w") as f:
+        json.dump(history, f, indent=2)
 
 
 app = FastAPI()
@@ -166,7 +213,13 @@ def optimize(file: UploadFile = File(...)):
             except Exception as e:
                 # If extraction fails, return basic result
                 response["warning"] = f"Could not extract full results: {str(e)}"
-        
+
+        # Save run to history (best-effort — never block the response)
+        try:
+            save_run_to_history(file.filename, response)
+        except Exception:
+            pass
+
         return response
 
     except HTTPException:
@@ -177,6 +230,22 @@ def optimize(file: UploadFile = File(...)):
             status_code=500, 
             detail=f"Unexpected error: {str(e)}"
         )
+
+
+# ==================================================
+# HISTORY ENDPOINT
+# ==================================================
+@app.get("/history")
+def get_history():
+    """Return list of past optimization runs (newest first)"""
+    if not os.path.exists(HISTORY_FILE):
+        return {"runs": [], "message": "No runs recorded yet"}
+    try:
+        with open(HISTORY_FILE, "r") as f:
+            history = json.load(f)
+        return {"runs": history}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Could not read history: {str(e)}")
 
 
 # ==================================================

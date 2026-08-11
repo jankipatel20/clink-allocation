@@ -94,6 +94,25 @@ class BackendAPIClient:
                 "message": f"Unexpected error: {str(e)}"
             }
 
+    def get_history(self) -> Dict[str, Any]:
+        """
+        Fetch the list of past optimization runs from the backend
+
+        Returns:
+            Dictionary with a 'runs' key containing a list of run records,
+            or an error dict if the request fails.
+        """
+        try:
+            response = requests.get(f"{self.base_url}/history", timeout=10)
+            if response.status_code == 200:
+                return response.json()
+            else:
+                return {"runs": [], "error": f"Server returned {response.status_code}"}
+        except requests.exceptions.ConnectionError:
+            return {"runs": [], "error": "Cannot connect to backend"}
+        except Exception as e:
+            return {"runs": [], "error": str(e)}
+
 
 # Cache the API client instance
 @st.cache_resource
